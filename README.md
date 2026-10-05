@@ -38,9 +38,9 @@ Mở thư mục `frontend/` bằng VS Code Live Server (mặc định `http://lo
 
 ## Deploy Frontend lên Vercel
 
-Repo đã có `vercel.json` để Vercel publish trực tiếp các file tĩnh trong `frontend/`. Trong Vercel, chọn **Add New → Project**, kết nối GitHub repo `quannguyen2322005/phone-store`, giữ cấu hình mặc định từ file rồi deploy. Mỗi lần push lên nhánh `main`, Vercel sẽ tự deploy lại.
+Trong Vercel, chọn **Add New → Project**, kết nối GitHub repo `quannguyen2322005/phone-store`, đặt **Root Directory** là `frontend`, **Framework Preset** là `Other`, không cần Build Command và đặt Output Directory là `.`. Sau lần deploy đầu, mỗi lần push lên nhánh `main`, Vercel sẽ tự deploy lại.
 
-Sau khi Vercel cấp domain, vào Render dashboard → service backend → **Environment** và đặt `CLIENT_ORIGINS` thành domain Vercel chính xác (ví dụ `https://ten-site.vercel.app`; không thêm dấu `/` ở cuối). Nếu có custom domain, liệt kê cả hai origin cách nhau bằng dấu phẩy. Lưu thay đổi để Render restart service. Backend chỉ cho phép những origin đã khai báo; không nên mở CORS toàn bộ bằng `app.use(cors())`.
+Sau khi Vercel cấp domain, vào Render dashboard → service backend → **Environment** và đặt `CLIENT_ORIGINS` thành domain Vercel chính xác (ví dụ `https://phone-store-frontend-peach.vercel.app`; không thêm dấu `/` ở cuối). Nếu có custom domain, liệt kê cả hai origin cách nhau bằng dấu phẩy. Lưu thay đổi để Render restart service. Backend chỉ cho phép những origin đã khai báo; không nên mở CORS toàn bộ bằng `app.use(cors())`.
 
 ## API chính
 
