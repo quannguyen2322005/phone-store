@@ -1,0 +1,131 @@
+﻿name: QuÃ¢n Nguyá»…n mobile store CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI - build and smoke tests
+    runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    env:
+      PORT: 5000
+      MONGODB_URI: mongodb://localhost:27017/phone_store_test
+      JWT_SECRET: test-secret-1234567890
+      CLIENT_ORIGINS: http://localhost:5500,http://127.0.0.1:5500
+      ADMIN_EMAIL: admin@quannguyenmobile.store
+      ADMIN_PASSWORD: QuanNguyenMobileStore123!
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Validate backend syntax
+        run: node --check server.js
+
+      - name: Start backend server
+        run: |
+          npm start > backend.log 2>&1 &
+          echo $! > backend.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:5000/api/health; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://localhost:5000/api/health
+          if ! curl -fsS http://localhost:5000/api/health > /dev/null; then
+            echo "Backend failed to start"
+            cat backend.log
+            exit 1
+          fi
+
+      - name: Run backend API smoke tests
+        run: |
+          curl -fsS "http://localhost:5000/api/products?page=1&limit=3"
+          LOGIN_RESULT=$(curl -fsS -X POST http://localhost:5000/api/auth/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@quannguyenmobile.store","password":"AdminPassword123!"}')
+          echo "$LOGIN_RESULT"
+          TOKEN=$(echo "$LOGIN_RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+          curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/overview
+
+      - name: Serve frontend for smoke check
+        run: |
+          cd ..
+          python3 -m http.server 5500 --directory frontend >/tmp/quannguyenmobile-frontend.log 2>&1 &
+          sleep 3
+          curl -fsSI http://localhost:5500/index.html
+          curl -fsSI http://localhost:5500/admin.html
+
+  deploy:
+    name: CD - deploy to Azure App Service
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.AZURE_WEBAPP_NAME != '' && secrets.AZURE_WEBAPP_PUBLISH_PROFILE != ''
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare backend deployment package
+        run: |
+          cd backend
+          zip -r ../quannguyenmobile-backend.zip . -x "node_modules/.cache/*" "**/.git/**" "**/.env" "**/.env.*"
+
+      - name: Deploy backend to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./quannguyenmobile-backend.zip
+
+      - name: Set required app settings
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az webapp config appsettings set \
+              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
+              --name "${{ secrets.AZURE_WEBAPP_NAME }}" \
+              --settings \
+                PORT=8080 \
+                NODE_ENV=production \
+                MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+                JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+                CLIENT_ORIGINS="https://${{ secrets.AZURE_WEBAPP_NAME }}.azurewebsites.net" \
+                ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}" \
+                ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}"
+
+
+

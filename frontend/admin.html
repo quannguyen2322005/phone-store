@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bảng quản lý sản phẩm, đơn hàng và kho điện thoại Quân Nguyễn mobile store.">
+  <title>Quản lý cửa hàng — Quân Nguyễn mobile store</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="admin-page">
+  <header class="admin-header"><div class="container"><a class="logo" href="index.html"><span class="logo-mark">Q</span>Quân Nguyễn mobile store <small>QUẢN TRỊ</small></a><a href="index.html" style="color:#cad6e5;font-size:11px">← Quay lại cửa hàng</a></div></header>
+  <main class="container admin-main">
+    <section class="login-card" id="login-card">
+      <a class="logo" href="index.html"><span class="logo-mark">Q</span>Quân Nguyễn mobile store</a>
+      <h1>Đăng nhập quản trị</h1>
+      <p>Sử dụng tài khoản Admin đã cấu hình cho cửa hàng.</p>
+      <form id="login-form">
+        <div class="form-field"><label for="login-email">Email</label><input id="login-email" name="email" type="email" required autocomplete="username"></div>
+        <div class="form-field"><label for="login-password">Mật khẩu</label><input id="login-password" name="password" type="password" required autocomplete="current-password"></div>
+        <button class="button" type="submit">Đăng nhập</button>
+      </form>
+    </section>
+    <section id="dashboard" class="hidden">
+      <div class="admin-heading"><div><h1>Tổng quan cửa hàng</h1><p>Quản lý tồn kho và theo dõi đơn hàng Quân Nguyễn mobile store.</p></div><button class="button secondary small" id="logout-button" type="button">Đăng xuất</button></div>
+      <div class="stats-grid">
+        <article class="stat-card"><div class="stat-label">Tổng doanh thu hoàn tất</div><div class="stat-value" id="stat-revenue">—</div><div class="stat-foot">Tính trên đơn đã hoàn thành</div></article>
+        <article class="stat-card"><div class="stat-label">Đơn hàng chờ xác nhận</div><div class="stat-value" id="stat-orders">—</div><div class="stat-foot">Đang chờ xử lý</div></article>
+        <article class="stat-card"><div class="stat-label">Sắp hết hàng (≤ 5 máy)</div><div class="stat-value" id="stat-stock">—</div><div class="stat-foot">Sản phẩm cần nhập thêm</div></article>
+        <article class="stat-card"><div class="stat-label">Tổng sản phẩm</div><div class="stat-value" id="stat-products">—</div><div class="stat-foot">Danh mục điện thoại</div></article>
+      </div>
+      <nav class="admin-tabs" aria-label="Khu vực quản lý"><button type="button" class="active" data-tab="products">Sản phẩm</button><button type="button" data-tab="orders">Đơn hàng</button></nav>
+      <section class="admin-panel" id="admin-panel"></section>
+    </section>
+  </main>
+  <div class="modal-backdrop" id="product-modal" aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header"><h2 id="modal-title">Thêm sản phẩm</h2><button class="close-button" type="button" data-close-modal aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"></path></svg></button></div>
+      <form class="modal-form" id="product-form">
+        <input type="hidden" name="id">
+        <div class="form-grid">
+          <div class="form-field"><label for="product-name">Tên điện thoại *</label><input id="product-name" name="name" required maxlength="140"></div>
+          <div class="form-field"><label for="product-brand">Thương hiệu *</label><select id="product-brand" name="brand" required><option value="APPLE">Apple</option><option value="SAMSUNG">Samsung</option><option value="XIAOMI">Xiaomi</option><option value="OPPO">OPPO</option><option value="ONEPLUS">OnePlus</option><option value="VIVO">Vivo</option><option value="GOOGLE">Google</option></select></div>
+          <div class="form-field"><label for="original-price">Giá gốc (₫) *</label><input id="original-price" name="originalPrice" type="number" min="0" required></div>
+          <div class="form-field"><label for="sale-price">Giá khuyến mãi (₫) *</label><input id="sale-price" name="salePrice" type="number" min="0" required></div>
+          <div class="form-field full"><label for="product-images">Ảnh sản phẩm (mỗi URL một dòng)</label><textarea id="product-images" name="images"></textarea></div>
+          <div class="form-field full"><label for="product-specs">Thông số JSON: screen, chip, ram, battery, camera</label><textarea id="product-specs" name="specs" required>{"screen":"","chip":"","ram":"","battery":"","camera":""}</textarea></div>
+          <div class="form-field full"><label for="product-variants">Phiên bản JSON (mỗi phần tử có storage, color, colorHex, price, originalPrice, stock)</label><textarea id="product-variants" name="variants" required>[{"storage":"256GB","color":"Đen","colorHex":"#333333","price":0,"originalPrice":0,"stock":1}]</textarea></div>
+        </div>
+        <div class="modal-actions"><button class="button secondary" type="button" data-close-modal>Hủy</button><button class="button" type="submit">Lưu sản phẩm</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="js/api.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
