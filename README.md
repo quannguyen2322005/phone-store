@@ -1,6 +1,6 @@
 # Quân Nguyễn mobile store — dự án bán và quản lý điện thoại
 
-Thư mục `frontend/` chứa website khách hàng và trang Admin; `backend/` chứa REST API Express/Mongoose. Trang hoa cũ ở `index.html` tại thư mục gốc được giữ nguyên.
+Thư mục `frontend/` chứa website khách hàng và trang Admin; `backend/` chứa REST API Express/Mongoose. 
 
 ## Yêu cầu
 
