@@ -17,7 +17,7 @@ npm install
 Copy-Item .env.example .env
 ```
 
-Sửa `backend/.env`: thay giá trị mẫu `JWT_SECRET` bằng chuỗi bí mật ngẫu nhiên riêng và điền cả `ADMIN_EMAIL` lẫn `ADMIN_PASSWORD` (tối thiểu 12 ký tự). Backend sẽ tạo tài khoản Admin từ hai biến này khi khởi động; không có mật khẩu Admin mặc định trong mã nguồn.
+Sửa `backend/.env`: thay giá trị mẫu `JWT_SECRET` bằng chuỗi bí mật ngẫu nhiên riêng và điền cả `ADMIN_EMAIL` lẫn `ADMIN_PASSWORD` (tối thiểu 12 ký tự). Backend sẽ tạo tài khoản Admin từ hai biến này khi khởi động; không có mật khẩu Admin mặc định trong mã nguồn. Ở local, dùng `MONGODB_URI`; production chấp nhận `MONGODB_URI` hoặc `MONGO_URI` (ưu tiên `MONGODB_URI`).
 
 ```powershell
 npm run dev
