@@ -1,5 +1,5 @@
 (() => {
-  const baseUrl = (window.PHONE_STORE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+  const baseUrl = (window.PHONE_STORE_API_URL || "https://phone-store-5nz3.onrender.com/api").replace(/\/$/, "");
 
   async function request(path, options = {}) {
     const headers = new Headers(options.headers || {});

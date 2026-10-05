@@ -29,11 +29,18 @@ API mặc định chạy tại `http://localhost:5000`; kiểm tra bằng `http:
 
 Mở thư mục `frontend/` bằng VS Code Live Server (mặc định `http://localhost:5500`) hoặc một static web server. CORS mặc định cho phép `localhost:5500` và `127.0.0.1:5500`; chỉnh `CLIENT_ORIGINS` trong `.env` nếu frontend dùng host/port khác. Có thể đổi API URL bằng cách khai báo `window.PHONE_STORE_API_URL` trước `js/api.js`.
 
+- API production mặc định: `https://phone-store-5nz3.onrender.com/api`.
 - Cửa hàng: `frontend/index.html`
 - Chi tiết: `frontend/product-detail.html?id=<productId>`
 - Quản lý: `frontend/admin.html`
 
 Đăng nhập Admin bằng thông tin trong `.env`, vào mục **Sản phẩm** và chọn **Thêm dữ liệu mẫu** để tạo 8 điện thoại mẫu. Giỏ hàng dùng `localStorage`; thao tác đặt đơn và cập nhật kho cần Backend/MongoDB đang chạy. Tài khoản khách có API đăng ký tại `POST /api/auth/register`; checkout hiện hỗ trợ đặt hàng không cần tài khoản.
+
+## Deploy Frontend lên Vercel
+
+Repo đã có `vercel.json` để Vercel publish trực tiếp các file tĩnh trong `frontend/`. Trong Vercel, chọn **Add New → Project**, kết nối GitHub repo `quannguyen2322005/phone-store`, giữ cấu hình mặc định từ file rồi deploy. Mỗi lần push lên nhánh `main`, Vercel sẽ tự deploy lại.
+
+Sau khi Vercel cấp domain, vào Render dashboard → service backend → **Environment** và đặt `CLIENT_ORIGINS` thành domain Vercel chính xác (ví dụ `https://ten-site.vercel.app`; không thêm dấu `/` ở cuối). Nếu có custom domain, liệt kê cả hai origin cách nhau bằng dấu phẩy. Lưu thay đổi để Render restart service. Backend chỉ cho phép những origin đã khai báo; không nên mở CORS toàn bộ bằng `app.use(cors())`.
 
 ## API chính
 
