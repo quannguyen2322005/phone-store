@@ -45,8 +45,15 @@ router.post("/seed", requireAuth, requireAdmin, asyncHandler(async (req, res) =>
   const operations = samples.map((sample) => ({
     updateOne: { filter: { name: sample.name }, update: { $setOnInsert: sample }, upsert: true }
   }));
-  await Product.bulkWrite(operations);
-  return res.json({ message: "Đã thêm dữ liệu điện thoại mẫu (không ghi đè sản phẩm hiện có).", count: samples.length });
+  const result = await Product.bulkWrite(operations);
+  const count = result.upsertedCount || 0;
+  return res.json({
+    message: count
+      ? `Đã thêm ${count} sản phẩm mẫu mới.`
+      : "Danh mục sản phẩm mẫu đã có đầy đủ, không thêm trùng.",
+    count,
+    totalSamples: samples.length
+  });
 }));
 
 router.get("/:id", asyncHandler(async (req, res) => {
@@ -150,11 +157,95 @@ function getSampleProducts() {
       images: ["https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&w=900&q=85"],
       variants: makeVariants([["256GB", 20990000, 12], ["512GB", 23990000, 7]], [["Đen", "#292929"], ["Xanh", "#46645a"]]),
       description: "Hiệu năng flagship, màn hình sắc nét và thời lượng pin bền bỉ."
-    }
+    },
+    ...getAdditionalSampleProducts(makeVariants)
   ].map((product) => ({
     ...product,
     stock: product.variants.reduce((total, variant) => total + variant.stock, 0)
   }));
+}
+
+function getAdditionalSampleProducts(makeVariants) {
+  const catalog = [
+    ["iPhone 16 Pro Max", "APPLE", 32990000, "6.9 inch OLED ProMotion", "Apple A18 Pro", "8GB", "4685mAh", "Camera Pro 48MP"],
+    ["iPhone 16 Pro", "APPLE", 28990000, "6.3 inch OLED ProMotion", "Apple A18 Pro", "8GB", "3582mAh", "Camera Pro 48MP"],
+    ["iPhone 16 Plus", "APPLE", 24990000, "6.7 inch OLED", "Apple A18", "8GB", "4674mAh", "Camera kép 48MP"],
+    ["iPhone 16", "APPLE", 21990000, "6.1 inch OLED", "Apple A18", "8GB", "3561mAh", "Camera kép 48MP"],
+    ["iPhone 16e", "APPLE", 16990000, "6.1 inch OLED", "Apple A18", "8GB", "4005mAh", "Camera Fusion 48MP"],
+    ["iPhone 15", "APPLE", 17990000, "6.1 inch OLED", "Apple A16 Bionic", "6GB", "3349mAh", "Camera chính 48MP"],
+    ["iPhone 15 Pro", "APPLE", 23990000, "6.1 inch OLED ProMotion", "Apple A17 Pro", "8GB", "3274mAh", "Camera Pro 48MP"],
+    ["Samsung Galaxy S25+", "SAMSUNG", 25990000, "6.7 inch Dynamic AMOLED 2X", "Snapdragon 8 Elite", "12GB", "4900mAh", "Camera chính 50MP"],
+    ["Samsung Galaxy S24 Ultra", "SAMSUNG", 26990000, "6.8 inch Dynamic AMOLED 2X", "Snapdragon 8 Gen 3", "12GB", "5000mAh", "Camera chính 200MP"],
+    ["Samsung Galaxy S24 FE", "SAMSUNG", 14990000, "6.7 inch Dynamic AMOLED 2X", "Exynos 2400e", "8GB", "4700mAh", "Camera chính 50MP"],
+    ["Samsung Galaxy Z Fold6", "SAMSUNG", 36990000, "7.6 inch Dynamic AMOLED 2X", "Snapdragon 8 Gen 3", "12GB", "4400mAh", "Camera chính 50MP"],
+    ["Samsung Galaxy Z Flip6", "SAMSUNG", 23990000, "6.7 inch Dynamic AMOLED 2X", "Snapdragon 8 Gen 3", "12GB", "4000mAh", "Camera kép 50MP"],
+    ["Samsung Galaxy A56 5G", "SAMSUNG", 9990000, "6.7 inch Super AMOLED", "Exynos 1580", "8GB", "5000mAh", "Camera chính 50MP"],
+    ["Samsung Galaxy A36 5G", "SAMSUNG", 7990000, "6.7 inch Super AMOLED", "Snapdragon 6 Gen 3", "8GB", "5000mAh", "Camera chính 50MP"],
+    ["Samsung Galaxy A26 5G", "SAMSUNG", 5990000, "6.7 inch Super AMOLED", "Exynos 1380", "6GB", "5000mAh", "Camera chính 50MP"],
+    ["Xiaomi 14T Pro", "XIAOMI", 15990000, "6.67 inch AMOLED 144Hz", "Dimensity 9300+", "12GB", "5000mAh", "Leica 50MP"],
+    ["Redmi Note 14 Pro+ 5G", "XIAOMI", 10990000, "6.67 inch AMOLED", "Snapdragon 7s Gen 3", "8GB", "5110mAh", "Camera chính 200MP"],
+    ["Redmi Note 14 Pro 5G", "XIAOMI", 8990000, "6.67 inch AMOLED", "Dimensity 7300 Ultra", "8GB", "5110mAh", "Camera chính 200MP"],
+    ["Redmi Note 14", "XIAOMI", 4990000, "6.67 inch AMOLED", "Helio G99 Ultra", "8GB", "5500mAh", "Camera chính 108MP"],
+    ["POCO X7 Pro", "XIAOMI", 8990000, "6.67 inch AMOLED 120Hz", "Dimensity 8400 Ultra", "12GB", "6000mAh", "Camera chính 50MP"],
+    ["POCO F7 Ultra", "XIAOMI", 16990000, "6.67 inch AMOLED 120Hz", "Snapdragon 8 Elite", "12GB", "5300mAh", "Camera chính 50MP"],
+    ["Redmi 14C", "XIAOMI", 2990000, "6.88 inch LCD", "MediaTek Helio G81 Ultra", "4GB", "5160mAh", "Camera chính 50MP"],
+    ["OPPO Find X8", "OPPO", 22990000, "6.59 inch AMOLED", "Dimensity 9400", "16GB", "5630mAh", "Hasselblad 50MP"],
+    ["OPPO Reno13 Pro 5G", "OPPO", 18990000, "6.83 inch AMOLED", "Dimensity 8350", "12GB", "5800mAh", "Camera chính 50MP"],
+    ["OPPO Reno13 5G", "OPPO", 14990000, "6.59 inch AMOLED", "Dimensity 8350", "12GB", "5600mAh", "Camera chính 50MP"],
+    ["OPPO Reno12 F 5G", "OPPO", 8990000, "6.67 inch AMOLED", "Dimensity 6300", "8GB", "5000mAh", "Camera chính 50MP"],
+    ["OPPO A5 Pro 5G", "OPPO", 6990000, "6.67 inch LCD", "Dimensity 6300", "8GB", "5800mAh", "Camera chính 50MP"],
+    ["OPPO A3x", "OPPO", 3990000, "6.67 inch LCD", "Snapdragon 6s Gen 1", "4GB", "5100mAh", "Camera chính 8MP"],
+    ["OnePlus 13R", "ONEPLUS", 16990000, "6.78 inch AMOLED 120Hz", "Snapdragon 8 Gen 3", "12GB", "6000mAh", "Camera chính 50MP"],
+    ["OnePlus 12", "ONEPLUS", 18990000, "6.82 inch AMOLED QHD+", "Snapdragon 8 Gen 3", "12GB", "5400mAh", "Hasselblad 50MP"],
+    ["OnePlus Nord 4", "ONEPLUS", 10990000, "6.74 inch AMOLED 120Hz", "Snapdragon 7+ Gen 3", "12GB", "5500mAh", "Camera chính 50MP"],
+    ["OnePlus Nord CE4 Lite", "ONEPLUS", 6990000, "6.67 inch AMOLED 120Hz", "Snapdragon 695", "8GB", "5500mAh", "Camera chính 50MP"],
+    ["vivo X200 Pro", "VIVO", 29990000, "6.78 inch AMOLED", "Dimensity 9400", "16GB", "6000mAh", "ZEISS 50MP"],
+    ["vivo V50", "VIVO", 13990000, "6.77 inch AMOLED", "Snapdragon 7 Gen 3", "12GB", "6000mAh", "ZEISS 50MP"],
+    ["vivo V40", "VIVO", 11990000, "6.78 inch AMOLED", "Snapdragon 7 Gen 3", "12GB", "5500mAh", "ZEISS 50MP"],
+    ["vivo Y100", "VIVO", 6990000, "6.67 inch AMOLED", "Snapdragon 685", "8GB", "5000mAh", "Camera chính 50MP"],
+    ["vivo Y29", "VIVO", 5990000, "6.68 inch LCD", "Snapdragon 685", "8GB", "6500mAh", "Camera chính 50MP"],
+    ["Google Pixel 9 Pro XL", "GOOGLE", 27990000, "6.8 inch OLED 120Hz", "Google Tensor G4", "16GB", "5060mAh", "Camera chính 50MP"],
+    ["Google Pixel 9 Pro", "GOOGLE", 24990000, "6.3 inch OLED 120Hz", "Google Tensor G4", "16GB", "4700mAh", "Camera chính 50MP"],
+    ["Google Pixel 9", "GOOGLE", 18990000, "6.3 inch OLED 120Hz", "Google Tensor G4", "12GB", "4700mAh", "Camera chính 50MP"],
+    ["Google Pixel 9a", "GOOGLE", 12990000, "6.3 inch OLED", "Google Tensor G4", "8GB", "5100mAh", "Camera chính 48MP"],
+    ["Google Pixel 8a", "GOOGLE", 9990000, "6.1 inch OLED 120Hz", "Google Tensor G3", "8GB", "4492mAh", "Camera chính 64MP"]
+  ];
+  const images = {
+    APPLE: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=85",
+    SAMSUNG: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=900&q=85",
+    XIAOMI: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85",
+    OPPO: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85",
+    ONEPLUS: "https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&w=900&q=85",
+    VIVO: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85",
+    GOOGLE: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=85"
+  };
+  const colors = {
+    APPLE: [["Đen", "#282828"], ["Titan", "#9c968d"]],
+    SAMSUNG: [["Đen", "#292929"], ["Bạc", "#c6c7c5"]],
+    XIAOMI: [["Đen", "#292929"], ["Xanh", "#657b8a"]],
+    OPPO: [["Đen", "#292929"], ["Xanh", "#46645a"]],
+    ONEPLUS: [["Đen", "#292929"], ["Xanh", "#46645a"]],
+    VIVO: [["Đen", "#292929"], ["Tím", "#8b79a6"]],
+    GOOGLE: [["Đen", "#292929"], ["Trắng", "#e8e7e4"]]
+  };
+
+  return catalog.map(([name, brand, salePrice, screen, chip, ram, battery, camera]) => {
+    const storagePrices = salePrice >= 20000000
+      ? [["256GB", salePrice, 10], ["512GB", salePrice + 4000000, 6]]
+      : [["128GB", salePrice, 12], ["256GB", salePrice + 2500000, 8]];
+    return {
+      name,
+      brand,
+      category: salePrice >= 20000000 ? "Flagship" : salePrice >= 8000000 ? "Tầm trung" : "Phổ thông",
+      originalPrice: salePrice + 2000000,
+      salePrice,
+      featured: false,
+      specs: { screen, chip, ram, battery, camera },
+      images: [images[brand]],
+      variants: makeVariants(storagePrices, colors[brand]),
+      description: `${name} chính hãng, cấu hình ${ram} RAM, phù hợp cho nhu cầu sử dụng hằng ngày.`
+    };
+  });
 }
 
 module.exports = router;

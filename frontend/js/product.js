@@ -19,27 +19,27 @@
   function renderProduct() {
     const variants = product.variants || [];
     selectedVariant = variants.find((variant) => variant.stock > 0) || variants[0];
-    if (!selectedVariant) throw new Error("Sáº£n pháº©m hiá»‡n chÆ°a cÃ³ phiÃªn báº£n nÃ o.");
+    if (!selectedVariant) throw new Error("Sản phẩm hiện chưa có phiên bản nào.");
     const storageOptions = [...new Set(variants.map((variant) => variant.storage))];
     const colorOptions = [...new Map(variants.map((variant) => [variant.color, variant])).values()];
     const image = selectedVariant.image || product.images?.[0] || "";
     const sale = selectedVariant.price;
     const old = selectedVariant.originalPrice;
     $("#breadcrumb-name").textContent = product.name;
-    document.title = `${product.name} â€” QuÃ¢n Nguyá»…n mobile store`;
+    document.title = `${product.name} — Quân Nguyễn mobile store`;
     detail.innerHTML = `
       <div class="detail-image"><img id="detail-image" src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}"></div>
       <div class="detail-info">
-        <div class="product-brand">${escapeHtml(product.brand)} Â· ${escapeHtml(product.category)}</div>
+        <div class="product-brand">${escapeHtml(product.brand)} · ${escapeHtml(product.category)}</div>
         <h1>${escapeHtml(product.name)}</h1>
-        <div class="rating-line"><span class="rating-stars">â˜…â˜…â˜…â˜…â˜…</span><span>HÃ ng chÃ­nh hÃ£ng Â· Báº£o hÃ nh chÃ­nh thá»©c</span></div>
+        <div class="rating-line"><span class="rating-stars">★★★★★</span><span>Hàng chính hãng · Bảo hành chính thức</span></div>
         <div class="detail-price"><span id="variant-price">${formatPrice(sale)}</span><del id="variant-old-price">${old > sale ? formatPrice(old) : ""}</del></div>
-        <div class="saving-label" id="variant-stock">${selectedVariant.stock > 0 ? `CÃ²n ${selectedVariant.stock} sáº£n pháº©m trong kho` : "PhiÃªn báº£n Ä‘Ã£ háº¿t hÃ ng"}</div>
-        <p style="margin:17px 0 0;color:#718095;font-size:11px;line-height:1.8">${escapeHtml(product.description || "Äiá»‡n thoáº¡i chÃ­nh hÃ£ng, giao hÃ ng toÃ n quá»‘c.")}</p>
-        <div class="option-block"><div class="option-title">Dung lÆ°á»£ng</div><div class="option-list" id="storage-options">${storageOptions.map((storage) => `<button type="button" class="option-chip ${storage === selectedVariant.storage ? "is-selected" : ""}" data-storage="${escapeHtml(storage)}">${escapeHtml(storage)}</button>`).join("")}</div></div>
-        <div class="option-block"><div class="option-title">MÃ u sáº¯c</div><div class="option-list" id="color-options">${colorOptions.map((variant) => `<button type="button" class="option-chip color-chip ${variant.color === selectedVariant.color ? "is-selected" : ""}" data-color="${escapeHtml(variant.color)}"><span class="color-dot" style="background:${escapeHtml(variant.colorHex || "#ddd")}"></span>${escapeHtml(variant.color)}</button>`).join("")}</div></div>
-        <div class="detail-actions"><button class="button" id="add-to-cart" type="button">ThÃªm vÃ o giá» hÃ ng</button><a class="button secondary" href="index.html#products">Tiáº¿p tá»¥c mua</a></div>
-        <div class="detail-perks"><span>HÃ ng chÃ­nh hÃ£ng 100%</span><span>Giao hÃ ng toÃ n quá»‘c</span><span>Äá»•i tráº£ theo chÃ­nh sÃ¡ch</span><span>Há»— trá»£ tráº£ gÃ³p linh hoáº¡t</span></div>
+        <div class="saving-label" id="variant-stock">${selectedVariant.stock > 0 ? `Còn ${selectedVariant.stock} sản phẩm trong kho` : "Phiên bản đã hết hàng"}</div>
+        <p style="margin:17px 0 0;color:#718095;font-size:11px;line-height:1.8">${escapeHtml(product.description || "Điện thoại chính hãng, giao hàng toàn quốc.")}</p>
+        <div class="option-block"><div class="option-title">Dung lượng</div><div class="option-list" id="storage-options">${storageOptions.map((storage) => `<button type="button" class="option-chip ${storage === selectedVariant.storage ? "is-selected" : ""}" data-storage="${escapeHtml(storage)}">${escapeHtml(storage)}</button>`).join("")}</div></div>
+        <div class="option-block"><div class="option-title">Màu sắc</div><div class="option-list" id="color-options">${colorOptions.map((variant) => `<button type="button" class="option-chip color-chip ${variant.color === selectedVariant.color ? "is-selected" : ""}" data-color="${escapeHtml(variant.color)}"><span class="color-dot" style="background:${escapeHtml(variant.colorHex || "#ddd")}"></span>${escapeHtml(variant.color)}</button>`).join("")}</div></div>
+        <div class="detail-actions"><button class="button" id="add-to-cart" type="button">Thêm vào giỏ hàng</button><a class="button secondary" href="index.html#products">Tiếp tục mua</a></div>
+        <div class="detail-perks"><span>Hàng chính hãng 100%</span><span>Giao hàng toàn quốc</span><span>Đổi trả theo chính sách</span><span>Hỗ trợ trả góp linh hoạt</span></div>
       </div>`;
     renderSpecs();
     $("#storage-options").addEventListener("click", (event) => {
@@ -63,33 +63,33 @@
     selectedVariant = variant;
     $("#variant-price").textContent = formatPrice(variant.price);
     $("#variant-old-price").textContent = variant.originalPrice > variant.price ? formatPrice(variant.originalPrice) : "";
-    $("#variant-stock").textContent = variant.stock > 0 ? `CÃ²n ${variant.stock} sáº£n pháº©m trong kho` : "PhiÃªn báº£n Ä‘Ã£ háº¿t hÃ ng";
+    $("#variant-stock").textContent = variant.stock > 0 ? `Còn ${variant.stock} sản phẩm trong kho` : "Phiên bản đã hết hàng";
     $("#detail-image").src = variant.image || product.images?.[0] || "";
     $("#storage-options").querySelectorAll("[data-storage]").forEach((button) => button.classList.toggle("is-selected", button.dataset.storage === variant.storage));
     $("#color-options").querySelectorAll("[data-color]").forEach((button) => button.classList.toggle("is-selected", button.dataset.color === variant.color));
     $("#add-to-cart").disabled = variant.stock < 1;
   }
   function renderSpecs() {
-    const labels = { screen: "MÃ n hÃ¬nh", chip: "Vi xá»­ lÃ½", ram: "RAM", battery: "Pin", camera: "Camera" };
+    const labels = { screen: "Màn hình", chip: "Vi xử lý", ram: "RAM", battery: "Pin", camera: "Camera" };
     const rows = Object.entries(labels).map(([key, label]) =>
-      `<tr><th>${label}</th><td>${escapeHtml(product.specs?.[key] || "Äang cáº­p nháº­t")}</td></tr>`
+      `<tr><th>${label}</th><td>${escapeHtml(product.specs?.[key] || "Đang cập nhật")}</td></tr>`
     );
-    rows.push(`<tr><th>Bá»™ nhá»›</th><td>${[...new Set(product.variants.map((variant) => variant.storage))].map(escapeHtml).join(" / ")}</td></tr>`);
+    rows.push(`<tr><th>Bộ nhớ</th><td>${[...new Set(product.variants.map((variant) => variant.storage))].map(escapeHtml).join(" / ")}</td></tr>`);
     $("#spec-table-wrap").innerHTML = `<table class="spec-table"><tbody>${rows.join("")}</tbody></table>`;
   }
   function addSelectedToCart() {
-    if (selectedVariant.stock < 1) return toast("PhiÃªn báº£n nÃ y hiá»‡n Ä‘Ã£ háº¿t hÃ ng.", true);
+    if (selectedVariant.stock < 1) return toast("Phiên bản này hiện đã hết hàng.", true);
     let cart = [];
     try {
       const parsed = JSON.parse(localStorage.getItem("quannguyenmobile-cart") || "[]");
       cart = Array.isArray(parsed) ? parsed : [];
     } catch (error) {
-      console.error("KhÃ´ng thá»ƒ Ä‘á»c giá» hÃ ng Ä‘Ã£ lÆ°u:", error);
-      return toast("KhÃ´ng Ä‘á»c Ä‘Æ°á»£c giá» hÃ ng Ä‘Ã£ lÆ°u. HÃ£y thá»­ xÃ³a dá»¯ liá»‡u trang vÃ  táº£i láº¡i.", true);
+      console.error("Không thể đọc giỏ hàng đã lưu:", error);
+      return toast("Không đọc được giỏ hàng đã lưu. Hãy thử xóa dữ liệu trang và tải lại.", true);
     }
     const key = `${product._id}:${selectedVariant._id}`;
     const existing = cart.find((item) => item.key === key);
-    if (existing && existing.quantity >= selectedVariant.stock) return toast("Sá»‘ lÆ°á»£ng trong giá» Ä‘Ã£ Ä‘áº¡t tá»“n kho hiá»‡n táº¡i.", true);
+    if (existing && existing.quantity >= selectedVariant.stock) return toast("Số lượng trong giỏ đã đạt tồn kho hiện tại.", true);
     if (existing) existing.quantity += 1;
     else cart.push({
       key, productId: product._id, variantId: selectedVariant._id, name: product.name, brand: product.brand,
@@ -100,7 +100,7 @@
     document.querySelectorAll("[data-cart-count]").forEach((badge) => {
       badge.textContent = cart.reduce((total, item) => total + item.quantity, 0);
     });
-    toast(`ÄÃ£ thÃªm ${product.name} vÃ o giá» hÃ ng.`);
+    toast(`Đã thêm ${product.name} vào giỏ hàng.`);
   }
 
   try {
@@ -108,7 +108,7 @@
     const badge = document.querySelector("[data-cart-count]");
     if (badge) badge.textContent = Array.isArray(savedCart) ? savedCart.reduce((total, item) => total + (Number(item.quantity) || 0), 0) : 0;
   } catch (error) {
-    console.error("KhÃ´ng thá»ƒ Ä‘á»c giá» hÃ ng Ä‘Ã£ lÆ°u:", error);
+    console.error("Không thể đọc giỏ hàng đã lưu:", error);
   }
   $("#detail-search").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -118,14 +118,14 @@
   const initialSearch = new URLSearchParams(location.search).get("search");
   if (initialSearch) $("#search-input").value = initialSearch;
   if (!productId) {
-    detail.innerHTML = '<div class="empty-state"><strong>ChÆ°a chá»n sáº£n pháº©m</strong><a href="index.html#products">Quay láº¡i danh sÃ¡ch Ä‘iá»‡n thoáº¡i</a></div>';
-    $("#spec-table-wrap").textContent = "KhÃ´ng cÃ³ thÃ´ng sá»‘ Ä‘á»ƒ hiá»ƒn thá»‹.";
+    detail.innerHTML = '<div class="empty-state"><strong>Chưa chọn sản phẩm</strong><a href="index.html#products">Quay lại danh sách điện thoại</a></div>';
+    $("#spec-table-wrap").textContent = "Không có thông số để hiển thị.";
   } else {
     PhoneAPI.getProduct(productId)
       .then((result) => { product = result.product; renderProduct(); })
       .catch((error) => {
-        detail.innerHTML = `<div class="empty-state"><strong>KhÃ´ng táº£i Ä‘Æ°á»£c sáº£n pháº©m</strong>${escapeHtml(error.message)}<br><br><a href="index.html#products">Quay láº¡i cá»­a hÃ ng</a></div>`;
-        $("#spec-table-wrap").textContent = "KhÃ´ng thá»ƒ táº£i thÃ´ng sá»‘ ká»¹ thuáº­t.";
+        detail.innerHTML = `<div class="empty-state"><strong>Không tải được sản phẩm</strong>${escapeHtml(error.message)}<br><br><a href="index.html#products">Quay lại cửa hàng</a></div>`;
+        $("#spec-table-wrap").textContent = "Không thể tải thông số kỹ thuật.";
       });
   }
 })();

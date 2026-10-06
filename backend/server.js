@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const connectDatabase = require("./src/config/db");
 const authRoutes = require("./src/routes/auth");
 const productRoutes = require("./src/routes/products");
@@ -10,10 +11,14 @@ const adminRoutes = require("./src/routes/admin");
 const User = require("./src/models/User");
 
 const app = express();
-const allowedOrigins = (process.env.CLIENT_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500")
-  .split(",")
+const isProduction = process.env.NODE_ENV === "production" || process.env.RENDER === "true";
+const configuredOrigins = process.env.CLIENT_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500";
+const localOrigins = isProduction
+  ? []
+  : ["http://localhost:5000", "http://127.0.0.1:5000", "http://localhost:5500", "http://127.0.0.1:5500"];
+const allowedOrigins = [...new Set([...configuredOrigins.split(","), ...localOrigins]
   .map((origin) => origin.trim())
-  .filter(Boolean);
+  .filter(Boolean))];
 
 app.use(cors({
   origin(origin, callback) {
@@ -30,6 +35,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
+
+if (process.env.SERVE_FRONTEND === "true") {
+  app.use(express.static(path.join(__dirname, "../frontend"), { extensions: ["html"] }));
+}
 
 app.use((req, res) => res.status(404).json({ message: "Không tìm thấy đường dẫn API." }));
 app.use((error, req, res, next) => {

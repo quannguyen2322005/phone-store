@@ -1,4 +1,4 @@
-﻿name: QuÃ¢n Nguyá»…n mobile store CI/CD
+﻿name: Phone Store CI
 
 on:
   push:
@@ -57,28 +57,34 @@ jobs:
         run: |
           npm start > backend.log 2>&1 &
           echo $! > backend.pid
+          ready=0
           for i in $(seq 1 30); do
-            if curl -fsS http://localhost:5000/api/health; then
+            if curl -fsS http://localhost:5000/api/health > /dev/null; then
+              ready=1
               break
             fi
             sleep 2
           done
 
-          curl -fsS http://localhost:5000/api/health
-          if ! curl -fsS http://localhost:5000/api/health > /dev/null; then
+          if [ "$ready" -ne 1 ]; then
             echo "Backend failed to start"
             cat backend.log
             exit 1
           fi
+          curl -fsS http://localhost:5000/api/health
 
       - name: Run backend API smoke tests
         run: |
-          curl -fsS "http://localhost:5000/api/products?page=1&limit=3"
           LOGIN_RESULT=$(curl -fsS -X POST http://localhost:5000/api/auth/login \
             -H "Content-Type: application/json" \
-            -d '{"email":"admin@quannguyenmobile.store","password":"AdminPassword123!"}')
-          echo "$LOGIN_RESULT"
-          TOKEN=$(echo "$LOGIN_RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+            -d '{"email":"admin@quannguyenmobile.store","password":"QuanNguyenMobileStore123!"}')
+          TOKEN=$(printf '%s' "$LOGIN_RESULT" | python3 -c "import sys, json; print(json.load(sys.stdin)['token'])")
+          curl -fsS -X POST http://localhost:5000/api/products/seed \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+          curl -fsS "http://localhost:5000/api/products?page=1&limit=3" \
+            | python3 -c "import sys, json; data=json.load(sys.stdin); assert data['products']; assert data['pagination']['total'] > 0"
           curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/overview
 
       - name: Serve frontend for smoke check
@@ -88,44 +94,3 @@ jobs:
           sleep 3
           curl -fsSI http://localhost:5500/index.html
           curl -fsSI http://localhost:5500/admin.html
-
-  deploy:
-    name: CD - deploy to Azure App Service
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.AZURE_WEBAPP_NAME != '' && secrets.AZURE_WEBAPP_PUBLISH_PROFILE != ''
-    needs: ci
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Prepare backend deployment package
-        run: |
-          cd backend
-          zip -r ../quannguyenmobile-backend.zip . -x "node_modules/.cache/*" "**/.git/**" "**/.env" "**/.env.*"
-
-      - name: Deploy backend to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./quannguyenmobile-backend.zip
-
-      - name: Set required app settings
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            az webapp config appsettings set \
-              --resource-group "${{ secrets.AZURE_RESOURCE_GROUP }}" \
-              --name "${{ secrets.AZURE_WEBAPP_NAME }}" \
-              --settings \
-                PORT=8080 \
-                NODE_ENV=production \
-                MONGODB_URI="${{ secrets.MONGODB_URI }}" \
-                JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-                CLIENT_ORIGINS="https://${{ secrets.AZURE_WEBAPP_NAME }}.azurewebsites.net" \
-                ADMIN_EMAIL="${{ secrets.ADMIN_EMAIL }}" \
-                ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}"
-
-
-

@@ -7,40 +7,38 @@ Thư mục `frontend/` chứa website khách hàng và trang Admin; `backend/` c
 - Node.js 18 trở lên
 - MongoDB Community đang chạy cục bộ tại `mongodb://localhost:27017`
 
-## Chạy Backend
+## Chạy toàn bộ hệ thống local
 
-Trong terminal:
+Không cần deploy hoặc đưa source code lên Internet. Website, API và MongoDB có thể chạy trên máy cá nhân.
+
+Trong PowerShell:
 
 ```powershell
 cd backend
 npm install
+```
+
+Nếu chưa có file `backend/.env`, tạo file từ mẫu:
+
+```powershell
 Copy-Item .env.example .env
 ```
 
-Sửa `backend/.env`: thay giá trị mẫu `JWT_SECRET` bằng chuỗi bí mật ngẫu nhiên riêng và điền cả `ADMIN_EMAIL` lẫn `ADMIN_PASSWORD` (tối thiểu 12 ký tự). Backend sẽ tạo tài khoản Admin từ hai biến này khi khởi động; không có mật khẩu Admin mặc định trong mã nguồn. Ở local, dùng `MONGODB_URI`; production chấp nhận `MONGODB_URI` hoặc `MONGO_URI` (ưu tiên `MONGODB_URI`).
+Trong `backend/.env`, đặt `MONGODB_URI=mongodb://localhost:27017/phone_store`, một `JWT_SECRET` riêng, cùng `ADMIN_EMAIL` và `ADMIN_PASSWORD` (tối thiểu 12 ký tự). Không dùng giá trị mẫu của `.env.example` và không commit file `.env`. Backend tạo tài khoản Admin khi khởi động. Đảm bảo MongoDB Community đang chạy cục bộ.
+
+Khởi chạy API và giao diện cùng lúc:
 
 ```powershell
-npm run dev
+npm run start:local
 ```
 
-API mặc định chạy tại `http://localhost:5000`; kiểm tra bằng `http://localhost:5000/api/health`.
+Mở `http://localhost:5000` cho cửa hàng hoặc `http://localhost:5000/admin.html` cho trang quản trị. Kiểm tra API tại `http://localhost:5000/api/health`; dừng server bằng `Ctrl+C`. Khi mở trên `localhost` hoặc `127.0.0.1`, frontend tự kết nối API local.
 
-## Chạy Frontend
+Đăng nhập Admin bằng thông tin trong `.env`. Trong mục **Sản phẩm**, chọn **Thêm dữ liệu mẫu** để thêm danh mục 50 điện thoại demo thuộc Apple, Samsung, Xiaomi, OPPO, OnePlus, vivo và Google Pixel. Thao tác có thể chạy lại an toàn, không ghi đè sản phẩm hiện có. Giỏ hàng dùng `localStorage`; đặt đơn và cập nhật kho cần backend cùng MongoDB đang chạy.
 
-Mở thư mục `frontend/` bằng VS Code Live Server (mặc định `http://localhost:5500`) hoặc một static web server. CORS mặc định cho phép `localhost:5500` và `127.0.0.1:5500`; chỉnh `CLIENT_ORIGINS` trong `.env` nếu frontend dùng host/port khác. Có thể đổi API URL bằng cách khai báo `window.PHONE_STORE_API_URL` trước `js/api.js`.
+Tuỳ chọn: chạy API riêng bằng `npm run dev`, rồi mở `frontend/` bằng VS Code Live Server. Nếu Live Server dùng cổng `5500`, cho phép origin đó trong `CLIENT_ORIGINS` ở `.env`.
 
-- API production mặc định: `https://phone-store-5nz3.onrender.com/api`.
-- Cửa hàng: `frontend/index.html`
-- Chi tiết: `frontend/product-detail.html?id=<productId>`
-- Quản lý: `frontend/admin.html`
-
-Đăng nhập Admin bằng thông tin trong `.env`, vào mục **Sản phẩm** và chọn **Thêm dữ liệu mẫu** để tạo 8 điện thoại mẫu. Giỏ hàng dùng `localStorage`; thao tác đặt đơn và cập nhật kho cần Backend/MongoDB đang chạy. Tài khoản khách có API đăng ký tại `POST /api/auth/register`; checkout hiện hỗ trợ đặt hàng không cần tài khoản.
-
-## Deploy Frontend lên Vercel
-
-Trong Vercel, chọn **Add New → Project**, kết nối GitHub repo `quannguyen2322005/phone-store`, đặt **Root Directory** là `frontend`, **Framework Preset** là `Other`, không cần Build Command và đặt Output Directory là `.`. Sau lần deploy đầu, mỗi lần push lên nhánh `main`, Vercel sẽ tự deploy lại.
-
-Sau khi Vercel cấp domain, vào Render dashboard → service backend → **Environment** và đặt `CLIENT_ORIGINS` thành domain Vercel chính xác (ví dụ `https://phone-store-frontend-peach.vercel.app`; không thêm dấu `/` ở cuối). Nếu có custom domain, liệt kê cả hai origin cách nhau bằng dấu phẩy. Lưu thay đổi để Render restart service. Backend chỉ cho phép những origin đã khai báo; không nên mở CORS toàn bộ bằng `app.use(cors())`.
+Workflow GitHub Actions chỉ chạy kiểm thử CI, không tự deploy ứng dụng lên cloud. Chạy local không yêu cầu push code hoặc tài khoản hosting.
 
 ## API chính
 

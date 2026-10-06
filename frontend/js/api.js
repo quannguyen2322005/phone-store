@@ -1,5 +1,9 @@
 (() => {
-  const baseUrl = (window.PHONE_STORE_API_URL || "https://phone-store-5nz3.onrender.com/api").replace(/\/$/, "");
+  const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  const defaultBaseUrl = isLocalhost
+    ? "http://localhost:5000/api"
+    : "https://phone-store-5nz3.onrender.com/api";
+  const baseUrl = (window.PHONE_STORE_API_URL || defaultBaseUrl).replace(/\/$/, "");
 
   async function request(path, options = {}) {
     const headers = new Headers(options.headers || {});

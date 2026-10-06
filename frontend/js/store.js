@@ -14,7 +14,7 @@
       const value = JSON.parse(localStorage.getItem("quannguyenmobile-cart") || "[]");
       return Array.isArray(value) ? value : [];
     } catch (error) {
-      console.error("KhÃ´ng thá»ƒ Ä‘á»c giá» hÃ ng Ä‘Ã£ lÆ°u:", error);
+      console.error("Không thể đọc giỏ hàng đã lưu:", error);
       return [];
     }
   };
@@ -54,30 +54,30 @@
     return `<article class="product-card">
       <a class="product-image" href="product-detail.html?id=${encodeURIComponent(product._id)}" aria-label="Xem ${escapeHtml(product.name)}">
         <img src="${escapeHtml(image)}" alt="${escapeHtml(product.name)}" loading="lazy">
-        ${product.featured ? '<span class="product-badge">Ná»•i báº­t</span>' : ""}
-        <button class="product-favorite" type="button" aria-label="Sáº£n pháº©m yÃªu thÃ­ch"><svg viewBox="0 0 24 24"><path d="M20.8 8.6c0 5.2-8.8 10.4-8.8 10.4S3.2 13.8 3.2 8.6A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.2Z"></path></svg></button>
+        ${product.featured ? '<span class="product-badge">Nổi bật</span>' : ""}
+        <button class="product-favorite" type="button" aria-label="Sản phẩm yêu thích"><svg viewBox="0 0 24 24"><path d="M20.8 8.6c0 5.2-8.8 10.4-8.8 10.4S3.2 13.8 3.2 8.6A4.6 4.6 0 0 1 12 6.4a4.6 4.6 0 0 1 8.8 2.2Z"></path></svg></button>
       </a>
       <div class="product-content">
         <div class="product-brand">${escapeHtml(product.brand)}</div>
         <h3 title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</h3>
-        <div class="product-spec-line"><span>${escapeHtml(product.specs?.ram || "â€”")} RAM</span><span>${escapeHtml(firstVariant?.storage || "Nhiá»u phiÃªn báº£n")}</span></div>
+        <div class="product-spec-line"><span>${escapeHtml(product.specs?.ram || "—")} RAM</span><span>${escapeHtml(firstVariant?.storage || "Nhiều phiên bản")}</span></div>
         <div class="product-price-line"><span class="product-price">${formatPrice(salePrice)}</span>${oldPrice > salePrice ? `<del class="product-old-price">${formatPrice(oldPrice)}</del>` : ""}</div>
-        <div class="product-card-footer"><span class="stock-label">${available ? `CÃ²n ${product.stock} mÃ¡y` : "Táº¡m háº¿t hÃ ng"}</span><button class="button small" type="button" data-add-product="${escapeHtml(product._id)}" ${available ? "" : "disabled"}>ThÃªm giá»</button></div>
+        <div class="product-card-footer"><span class="stock-label">${available ? `Còn ${product.stock} máy` : "Tạm hết hàng"}</span><button class="button small" type="button" data-add-product="${escapeHtml(product._id)}" ${available ? "" : "disabled"}>Thêm giỏ</button></div>
       </div>
     </article>`;
   }
   async function loadProducts() {
-    grid.innerHTML = '<div class="empty-state">Äang táº£i danh sÃ¡ch Ä‘iá»‡n thoáº¡i...</div>';
+    grid.innerHTML = '<div class="empty-state">Đang tải danh sách điện thoại...</div>';
     try {
       const result = await PhoneAPI.getProducts(getFilters());
       state.totalPages = Math.max(1, result.pagination.pages);
-      $("#result-count").textContent = `${result.pagination.total} sáº£n pháº©m`;
+      $("#result-count").textContent = `${result.pagination.total} sản phẩm`;
       grid.innerHTML = result.products.length ? result.products.map(productCard).join("") :
-        '<div class="empty-state"><strong>ChÆ°a tÃ¬m tháº¥y Ä‘iá»‡n thoáº¡i phÃ¹ há»£p</strong>Thá»­ xÃ³a bá»›t bá»™ lá»c hoáº·c tÃ¬m kiáº¿m vá»›i tá»« khÃ³a khÃ¡c.</div>';
+        '<div class="empty-state"><strong>Chưa tìm thấy điện thoại phù hợp</strong>Thử xóa bớt bộ lọc hoặc tìm kiếm với từ khóa khác.</div>';
       renderPagination();
     } catch (error) {
-      grid.innerHTML = `<div class="empty-state"><strong>KhÃ´ng táº£i Ä‘Æ°á»£c sáº£n pháº©m</strong>${escapeHtml(error.message)}<br><br>HÃ£y kiá»ƒm tra Backend táº¡i ${escapeHtml(PhoneAPI.baseUrl)}.</div>`;
-      $("#result-count").textContent = "KhÃ´ng thá»ƒ káº¿t ná»‘i";
+      grid.innerHTML = `<div class="empty-state"><strong>Không tải được sản phẩm</strong>${escapeHtml(error.message)}<br><br>Hãy kiểm tra Backend tại ${escapeHtml(PhoneAPI.baseUrl)}.</div>`;
+      $("#result-count").textContent = "Không thể kết nối";
       $("#pagination").innerHTML = "";
     }
   }
@@ -92,7 +92,7 @@
     const cart = readCart();
     const key = `${product._id}:${variant._id}`;
     const existing = cart.find((item) => item.key === key);
-    if (existing && existing.quantity >= variant.stock) return showToast("Sá»‘ lÆ°á»£ng trong giá» Ä‘Ã£ Ä‘áº¡t tá»“n kho hiá»‡n táº¡i.", true);
+    if (existing && existing.quantity >= variant.stock) return showToast("Số lượng trong giỏ đã đạt tồn kho hiện tại.", true);
     if (existing) existing.quantity += 1;
     else cart.push({
       key, productId: product._id, variantId: variant._id, name: product.name, brand: product.brand,
@@ -100,13 +100,13 @@
       price: variant.price, stock: variant.stock, quantity: 1
     });
     saveCart(cart);
-    showToast(`ÄÃ£ thÃªm ${product.name} vÃ o giá» hÃ ng.`);
+    showToast(`Đã thêm ${product.name} vào giỏ hàng.`);
   }
   async function addById(id) {
     try {
       const { product } = await PhoneAPI.getProduct(id);
       const variant = product.variants.find((item) => item.stock > 0);
-      if (!variant) return showToast("Sáº£n pháº©m hiá»‡n Ä‘Ã£ háº¿t hÃ ng.", true);
+      if (!variant) return showToast("Sản phẩm hiện đã hết hàng.", true);
       addToCart(product, variant);
     } catch (error) { showToast(error.message, true); }
   }
@@ -119,11 +119,11 @@
     target.innerHTML = cart.length ? cart.map((item) => `
       <div class="cart-row">
         <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">
-        <div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.storage)} Â· ${escapeHtml(item.color)}</p><strong>${formatPrice(item.price)}</strong>
-          <div class="qty-control"><button type="button" data-qty="-1" data-key="${escapeHtml(item.key)}" aria-label="Giáº£m sá»‘ lÆ°á»£ng">âˆ’</button><span>${item.quantity}</span><button type="button" data-qty="1" data-key="${escapeHtml(item.key)}" aria-label="TÄƒng sá»‘ lÆ°á»£ng" ${item.quantity >= item.stock ? "disabled" : ""}>+</button></div>
+        <div><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.storage)} · ${escapeHtml(item.color)}</p><strong>${formatPrice(item.price)}</strong>
+          <div class="qty-control"><button type="button" data-qty="-1" data-key="${escapeHtml(item.key)}" aria-label="Giảm số lượng">−</button><span>${item.quantity}</span><button type="button" data-qty="1" data-key="${escapeHtml(item.key)}" aria-label="Tăng số lượng" ${item.quantity >= item.stock ? "disabled" : ""}>+</button></div>
         </div>
-        <button class="remove-cart" type="button" data-remove="${escapeHtml(item.key)}" aria-label="XÃ³a ${escapeHtml(item.name)}">Ã—</button>
-      </div>`).join("") : '<div class="empty-state"><strong>Giá» hÃ ng Ä‘ang trá»‘ng</strong>Chá»n chiáº¿c Ä‘iá»‡n thoáº¡i phÃ¹ há»£p vá»›i báº¡n nhÃ©.</div>';
+        <button class="remove-cart" type="button" data-remove="${escapeHtml(item.key)}" aria-label="Xóa ${escapeHtml(item.name)}">×</button>
+      </div>`).join("") : '<div class="empty-state"><strong>Giỏ hàng đang trống</strong>Chọn chiếc điện thoại phù hợp với bạn nhé.</div>';
     $("#cart-total").textContent = formatPrice(cart.reduce((total, item) => total + item.price * item.quantity, 0));
     $("#checkout-form").classList.toggle("hidden", cart.length === 0);
   }
@@ -205,7 +205,7 @@
   $("#checkout-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const cart = readCart();
-    if (!cart.length) return showToast("Giá» hÃ ng cá»§a báº¡n Ä‘ang trá»‘ng.", true);
+    if (!cart.length) return showToast("Giỏ hàng của bạn đang trống.", true);
     const form = new FormData(event.currentTarget);
     const order = {
       customer: { name: form.get("name"), phone: form.get("phone"), email: form.get("email"), address: form.get("address") },
@@ -215,17 +215,17 @@
     };
     const submit = event.currentTarget.querySelector('[type="submit"]');
     submit.disabled = true;
-    submit.textContent = "Äang táº¡o Ä‘Æ¡n hÃ ng...";
+    submit.textContent = "Đang tạo đơn hàng...";
     try {
       const result = await PhoneAPI.createOrder(order);
       saveCart([]);
       event.currentTarget.reset();
       setDeliveryFields();
       $("#cart-overlay").classList.remove("is-open");
-      showToast(`Äáº·t hÃ ng thÃ nh cÃ´ng Â· MÃ£ Ä‘Æ¡n ${result.order._id.slice(-8).toUpperCase()}.`);
+      showToast(`Đặt hàng thành công · Mã đơn ${result.order._id.slice(-8).toUpperCase()}.`);
       loadProducts();
     } catch (error) { showToast(error.message, true); }
-    finally { submit.disabled = false; submit.textContent = "Äáº·t hÃ ng ngay"; }
+    finally { submit.disabled = false; submit.textContent = "Đặt hàng ngay"; }
   });
   $(".mobile-menu").addEventListener("click", (event) => {
     const nav = $(".header-nav");
