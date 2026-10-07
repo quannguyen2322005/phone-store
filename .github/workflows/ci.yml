@@ -31,6 +31,7 @@ jobs:
       CLIENT_ORIGINS: http://localhost:5500,http://127.0.0.1:5500
       ADMIN_EMAIL: admin@quannguyenmobile.store
       ADMIN_PASSWORD: QuanNguyenMobileStore123!
+      SERVE_FRONTEND: "true"
 
     defaults:
       run:
@@ -49,6 +50,11 @@ jobs:
 
       - name: Install backend dependencies
         run: npm ci
+
+      - name: Install and build React frontend
+        run: |
+          npm ci --prefix ../frontend
+          npm run build --prefix ../frontend
 
       - name: Validate backend syntax
         run: node --check server.js
@@ -87,10 +93,8 @@ jobs:
             | python3 -c "import sys, json; data=json.load(sys.stdin); assert data['products']; assert data['pagination']['total'] > 0"
           curl -fsS -H "Authorization: Bearer $TOKEN" http://localhost:5000/api/admin/overview
 
-      - name: Serve frontend for smoke check
+      - name: Run React frontend smoke tests
         run: |
-          cd ..
-          python3 -m http.server 5500 --directory frontend >/tmp/quannguyenmobile-frontend.log 2>&1 &
-          sleep 3
-          curl -fsSI http://localhost:5500/index.html
-          curl -fsSI http://localhost:5500/admin.html
+          for route in / /admin /about /product/sample; do
+            curl -fsS "http://localhost:5000$route" | grep -q 'id="root"'
+          done

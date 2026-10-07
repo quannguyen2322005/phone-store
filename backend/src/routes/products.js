@@ -6,6 +6,14 @@ const { requireAuth, requireAdmin } = require("../middleware/auth");
 const { asyncHandler } = require("../utils/asyncHandler");
 
 const router = express.Router();
+const legacySampleImages = [
+  "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85"
+];
 
 router.get("/", asyncHandler(async (req, res) => {
   const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
@@ -31,8 +39,12 @@ router.get("/", asyncHandler(async (req, res) => {
   }
   if (req.query.search?.trim()) filter.$text = { $search: String(req.query.search).trim() };
 
-  const allowedSort = { price_asc: { salePrice: 1 }, price_desc: { salePrice: -1 }, newest: { createdAt: -1 } };
-  const sort = allowedSort[req.query.sort] || { featured: -1, createdAt: -1 };
+  const allowedSort = {
+    price_asc: { salePrice: 1, _id: 1 },
+    price_desc: { salePrice: -1, _id: 1 },
+    newest: { createdAt: -1, _id: 1 }
+  };
+  const sort = allowedSort[req.query.sort] || { featured: -1, createdAt: -1, _id: 1 };
   const [products, total] = await Promise.all([
     Product.find(filter).sort(sort).skip((page - 1) * limit).limit(limit),
     Product.countDocuments(filter)
@@ -46,12 +58,20 @@ router.post("/seed", requireAuth, requireAdmin, asyncHandler(async (req, res) =>
     updateOne: { filter: { name: sample.name }, update: { $setOnInsert: sample }, upsert: true }
   }));
   const result = await Product.bulkWrite(operations);
+  const imageUpdates = await Product.bulkWrite(samples.map((sample) => ({
+    updateOne: {
+      filter: { name: sample.name, images: { $in: legacySampleImages } },
+      update: { $set: { images: sample.images } }
+    }
+  })));
   const count = result.upsertedCount || 0;
+  const updatedImages = imageUpdates.modifiedCount || 0;
   return res.json({
-    message: count
-      ? `Đã thêm ${count} sản phẩm mẫu mới.`
-      : "Danh mục sản phẩm mẫu đã có đầy đủ, không thêm trùng.",
+    message: count || updatedImages
+      ? `Đã thêm ${count} sản phẩm mẫu và cập nhật ảnh riêng cho ${updatedImages} sản phẩm.`
+      : "Danh mục mẫu đã đầy đủ và ảnh riêng đã được cập nhật.",
     count,
+    updatedImages,
     totalSamples: samples.length
   });
 }));
@@ -95,6 +115,7 @@ router.delete("/:id", requireAuth, requireAdmin, asyncHandler(async (req, res) =
 }));
 
 function getSampleProducts() {
+  const sampleImage = (name) => `/images/products/${name.toLowerCase().replace(/\+/g, " plus ").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.webp`;
   const makeVariants = (prices, colors) => prices.flatMap(([storage, price, stock]) =>
     colors.map(([color, colorHex], index) => ({
       storage, color, colorHex, price: price + index * 300000, originalPrice: price + index * 300000 + 1500000,
@@ -161,6 +182,7 @@ function getSampleProducts() {
     ...getAdditionalSampleProducts(makeVariants)
   ].map((product) => ({
     ...product,
+    images: [sampleImage(product.name)],
     stock: product.variants.reduce((total, variant) => total + variant.stock, 0)
   }));
 }
@@ -210,15 +232,6 @@ function getAdditionalSampleProducts(makeVariants) {
     ["Google Pixel 9a", "GOOGLE", 12990000, "6.3 inch OLED", "Google Tensor G4", "8GB", "5100mAh", "Camera chính 48MP"],
     ["Google Pixel 8a", "GOOGLE", 9990000, "6.1 inch OLED 120Hz", "Google Tensor G3", "8GB", "4492mAh", "Camera chính 64MP"]
   ];
-  const images = {
-    APPLE: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=85",
-    SAMSUNG: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=900&q=85",
-    XIAOMI: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85",
-    OPPO: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85",
-    ONEPLUS: "https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&w=900&q=85",
-    VIVO: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85",
-    GOOGLE: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=85"
-  };
   const colors = {
     APPLE: [["Đen", "#282828"], ["Titan", "#9c968d"]],
     SAMSUNG: [["Đen", "#292929"], ["Bạc", "#c6c7c5"]],
@@ -241,7 +254,7 @@ function getAdditionalSampleProducts(makeVariants) {
       salePrice,
       featured: false,
       specs: { screen, chip, ram, battery, camera },
-      images: [images[brand]],
+      images: [],
       variants: makeVariants(storagePrices, colors[brand]),
       description: `${name} chính hãng, cấu hình ${ram} RAM, phù hợp cho nhu cầu sử dụng hằng ngày.`
     };

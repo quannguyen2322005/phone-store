@@ -10,6 +10,29 @@ const BRANDS = [
 const STATUS_NAMES = {
   pending: "Chờ xác nhận", shipping: "Đang giao", completed: "Đã hoàn thành", cancelled: "Đã hủy"
 };
+const LEGACY_SAMPLE_IMAGES = new Set([
+  "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85"
+]);
+const BRAND_IMAGE_FALLBACKS = {
+  APPLE: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=85",
+  SAMSUNG: "https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=900&q=85",
+  XIAOMI: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=85",
+  OPPO: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85",
+  ONEPLUS: "https://images.unsplash.com/photo-1605236453806-6ff36851218e?auto=format&fit=crop&w=900&q=85",
+  VIVO: "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=900&q=85",
+  GOOGLE: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=85"
+};
+const slugify = (value) => value.toLowerCase().replace(/\+/g, " plus ").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const productImagePath = (name) => `/images/products/${slugify(name)}`;
+function productImageSource(name, brand, source) {
+  if (source && !LEGACY_SAMPLE_IMAGES.has(source) && !source.startsWith("/images/products/")) return source;
+  return `${productImagePath(name)}.webp`;
+}
 const money = (value) => new Intl.NumberFormat("vi-VN", {
   style: "currency", currency: "VND", maximumFractionDigits: 0
 }).format(value || 0);
@@ -73,7 +96,7 @@ function App() {
       if (current.some((item) => item.key === key)) return current.map((item) => item.key === key ? { ...item, quantity: item.quantity + 1 } : item);
       const item = {
         key, productId: product._id, variantId: variant._id, name: product.name, brand: product.brand,
-        image: variant.image || product.images?.[0] || "", storage: variant.storage, color: variant.color,
+        image: productImageSource(product.name, product.brand, variant.image || product.images?.[0]), storage: variant.storage, color: variant.color,
         price: variant.price, stock: variant.stock, quantity: 1
       };
       return [...current, item];
@@ -330,13 +353,13 @@ function FilterGroup({ title, options, selected, onChange }) {
 
 function ProductCard({ product, favorite, onFavorite, onAdd }) {
   const variant = product.variants?.find((item) => item.stock > 0) || product.variants?.[0];
-  const image = variant?.image || product.images?.[0] || "";
+  const image = productImageSource(product.name, product.brand, variant?.image || product.images?.[0]);
   const price = variant?.price ?? product.salePrice;
   const original = variant?.originalPrice ?? product.originalPrice;
   return (
     <article className="product-card">
       <div className="product-image">
-        <Link to={`/product/${product._id}`} aria-label={`Xem ${product.name}`}><img src={image} alt={product.name} loading="lazy" /></Link>
+        <Link to={`/product/${product._id}`} aria-label={`Xem ${product.name}`}><ProductImage name={product.name} brand={product.brand} source={image} alt={product.name} loading="lazy" /></Link>
         {product.featured && <span className="product-badge">Nổi bật</span>}
         <button className={`product-favorite${favorite ? " is-selected" : ""}`} type="button" aria-label={favorite ? "Bỏ yêu thích" : "Thêm yêu thích"} onClick={onFavorite}><HeartIcon /></button>
       </div>
@@ -419,7 +442,7 @@ function ProductPage({ addToCart, onOpenCart }) {
       <div className="page-title"><Link to="/">Trang chủ</Link>　/　<a href="/#products">Điện thoại</a>　/　<span>{product?.name || "Chi tiết sản phẩm"}</span></div>
       {error ? <div className="empty-state"><strong>Không tải được sản phẩm</strong>{error}</div> : !product ? <div className="empty-state">Đang tải sản phẩm...</div> : <>
         <section className="detail-layout">
-          <div className="detail-image"><img src={selected?.image || product.images?.[0] || ""} alt={product.name} /></div>
+          <div className="detail-image"><ProductImage name={product.name} brand={product.brand} source={productImageSource(product.name, product.brand, selected?.image || product.images?.[0])} alt={product.name} /></div>
           <div className="detail-info"><div className="product-brand">{product.brand} · {product.category}</div><h1>{product.name}</h1><div className="rating-line"><span className="rating-stars">★★★★★</span><span>Hàng chính hãng · Bảo hành chính thức</span></div>
             <div className="detail-price"><span>{money(selected?.price)}</span>{selected?.originalPrice > selected?.price && <del>{money(selected.originalPrice)}</del>}</div>
             <div className="saving-label">{selected?.stock > 0 ? `Còn ${selected.stock} sản phẩm trong kho` : "Phiên bản đã hết hàng"}</div>
@@ -473,7 +496,7 @@ function CartDrawer({ cart, open, onClose, adjustCart, setCart, setToast }) {
     <section className="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
       <div className="drawer-head"><h2 id="cart-title">Giỏ hàng &amp; đặt hàng</h2><button className="close-button" type="button" onClick={onClose} aria-label="Đóng giỏ hàng"><CloseIcon /></button></div>
       <div className="drawer-body">{cart.length ? cart.map((item) => <div className="cart-row" key={item.key}>
-        <img src={item.image} alt={item.name} /><div><h3>{item.name}</h3><p>{item.storage} · {item.color}</p><strong>{money(item.price)}</strong><div className="qty-control"><button type="button" onClick={() => adjustCart(item.key, -1)} aria-label="Giảm số lượng">−</button><span>{item.quantity}</span><button type="button" onClick={() => adjustCart(item.key, 1)} disabled={item.quantity >= item.stock} aria-label="Tăng số lượng">+</button></div></div>
+        <ProductImage name={item.name} brand={item.brand} source={item.image} alt={item.name} /><div><h3>{item.name}</h3><p>{item.storage} · {item.color}</p><strong>{money(item.price)}</strong><div className="qty-control"><button type="button" onClick={() => adjustCart(item.key, -1)} aria-label="Giảm số lượng">−</button><span>{item.quantity}</span><button type="button" onClick={() => adjustCart(item.key, 1)} disabled={item.quantity >= item.stock} aria-label="Tăng số lượng">+</button></div></div>
         <button className="remove-cart" type="button" onClick={() => setCart((current) => current.filter((entry) => entry.key !== item.key))} aria-label={`Xóa ${item.name}`}>×</button>
       </div>) : <div className="empty-state"><strong>Giỏ hàng đang trống</strong>Chọn chiếc điện thoại phù hợp với bạn nhé.</div>}</div>
       <form className={`checkout-form${cart.length ? "" : " hidden"}`} key={formKey} onSubmit={checkout}>
@@ -615,7 +638,7 @@ function AdminPage({ setToast }) {
           {activeTab === "products" ? <><div className="panel-toolbar"><h2>Danh sách sản phẩm ({productTotal})</h2><div className="admin-toolbar-actions"><button className="button secondary small" type="button" onClick={seedProducts}>Thêm dữ liệu mẫu</button><button className="button small" type="button" onClick={() => setModalProduct(null)}>+ Thêm sản phẩm</button></div></div>
             {loading ? <div className="empty-state">Đang tải dữ liệu...</div> : error ? <div className="empty-state"><strong>Không tải được dữ liệu</strong>{error}</div> : <div className="table-wrap"><table className="admin-table"><thead><tr><th>SẢN PHẨM</th><th>GIÁ BÁN</th><th>RAM / ROM</th><th>TỒN KHO</th><th>THAO TÁC</th></tr></thead><tbody>{products.length ? products.map((product) => {
               const variant = product.variants?.[0];
-              return <tr key={product._id}><td><div className="table-product"><img src={variant?.image || product.images?.[0] || ""} alt="" /><div><strong>{product.name}</strong><div className="admin-subtext">{product.brand}</div></div></div></td><td>{money(variant?.price ?? product.salePrice)}</td><td>{product.specs?.ram || "—"} / {variant?.storage || "—"}</td><td className={product.stock <= 5 ? "inventory-low" : ""}>{product.stock} máy</td><td><div className="table-actions"><button className="icon-action" type="button" aria-label="Sửa sản phẩm" onClick={() => setModalProduct(product)}><EditIcon /></button><button className="icon-action" type="button" aria-label="Xóa sản phẩm" onClick={() => removeProduct(product)}><DeleteIcon /></button></div></td></tr>;
+              return <tr key={product._id}><td><div className="table-product"><ProductImage name={product.name} brand={product.brand} source={productImageSource(product.name, product.brand, variant?.image || product.images?.[0])} alt="" /><div><strong>{product.name}</strong><div className="admin-subtext">{product.brand}</div></div></div></td><td>{money(variant?.price ?? product.salePrice)}</td><td>{product.specs?.ram || "—"} / {variant?.storage || "—"}</td><td className={product.stock <= 5 ? "inventory-low" : ""}>{product.stock} máy</td><td><div className="table-actions"><button className="icon-action" type="button" aria-label="Sửa sản phẩm" onClick={() => setModalProduct(product)}><EditIcon /></button><button className="icon-action" type="button" aria-label="Xóa sản phẩm" onClick={() => removeProduct(product)}><DeleteIcon /></button></div></td></tr>;
             }) : <tr><td colSpan="5" className="admin-empty">Chưa có sản phẩm nào. Thêm sản phẩm hoặc tạo dữ liệu mẫu.</td></tr>}</tbody></table></div>}</>
             : <><div className="panel-toolbar"><h2>Đơn hàng ({orders.length})</h2><button className="button secondary small" type="button" onClick={() => { loadTab(); refreshOverview(); }}>Làm mới</button></div>
               {loading ? <div className="empty-state">Đang tải dữ liệu...</div> : error ? <div className="empty-state"><strong>Không tải được dữ liệu</strong>{error}</div> : <div className="table-wrap"><table className="admin-table"><thead><tr><th>MÃ ĐƠN</th><th>KHÁCH HÀNG</th><th>SẢN PHẨM</th><th>TỔNG TIỀN</th><th>THANH TOÁN</th><th>TRẠNG THÁI</th></tr></thead><tbody>{orders.length ? orders.map((order) => <tr key={order._id}><td><strong>#{order._id.slice(-8).toUpperCase()}</strong><div className="admin-subtext">{new Date(order.createdAt).toLocaleString("vi-VN")}</div></td><td><strong>{order.customer.name}</strong><div className="admin-subtext">{order.customer.phone}</div><div className="admin-subtext">{order.deliveryMethod === "pickup" ? "Nhận tại cửa hàng" : order.customer.address}</div></td><td>{order.items.map((item, index) => <span key={`${item.productName}-${index}`}>{item.productName} × {item.quantity}<div className="admin-subtext">{item.storage} · {item.color}</div>{index < order.items.length - 1 && <br />}</span>)}</td><td><strong>{money(order.total)}</strong></td><td>{order.paymentMethod}<div className="admin-subtext">{order.paymentStatus === "paid" ? "Đã thanh toán" : "Chưa thanh toán"}</div></td><td><select className="sort-select" value={order.status} disabled={order.status === "cancelled"} aria-label="Trạng thái đơn hàng" onChange={(event) => changeOrderStatus(order._id, event.target.value)}>{Object.entries(STATUS_NAMES).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select><br /><span className={`status-pill ${order.status}`}>{STATUS_NAMES[order.status] || order.status}</span></td></tr>) : <tr><td colSpan="6" className="admin-empty">Chưa có đơn hàng.</td></tr>}</tbody></table></div>}</>}
@@ -653,6 +676,18 @@ function ProductModal({ product, saving, onClose, onSubmit }) {
 
 function NotFound() {
   return <main className="container page-shell"><div className="empty-state"><strong>Không tìm thấy trang này</strong><Link className="button" to="/">Quay lại cửa hàng</Link></div></main>;
+}
+
+function ProductImage({ name, brand, source, alt, ...props }) {
+  const primary = productImageSource(name, brand, source);
+  const candidates = primary.startsWith("/images/products/")
+    ? [".webp", ".jpg", ".jpeg", ".png"].map((extension) => `${productImagePath(name)}${extension}`)
+      .concat(BRAND_IMAGE_FALLBACKS[brand] || [])
+    : [primary];
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  useEffect(() => setCandidateIndex(0), [primary]);
+  if (candidateIndex >= candidates.length || !candidates[candidateIndex]) return null;
+  return <img {...props} src={candidates[candidateIndex]} alt={alt} onError={() => setCandidateIndex((index) => index + 1)} />;
 }
 
 function SearchIcon() { return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>; }
