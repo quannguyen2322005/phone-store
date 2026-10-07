@@ -15,6 +15,9 @@ Trong PowerShell:
 
 ```powershell
 cd backend
+cd frontend
+npm install
+cd ..\backend
 npm install
 ```
 
@@ -32,9 +35,18 @@ Khởi chạy API và giao diện cùng lúc:
 npm run start:local
 ```
 
-Mở `http://localhost:5000` cho cửa hàng hoặc `http://localhost:5000/admin.html` cho trang quản trị. Kiểm tra API tại `http://localhost:5000/api/health`; dừng server bằng `Ctrl+C`. Khi mở trên `localhost` hoặc `127.0.0.1`, frontend tự kết nối API local.
+Mở `http://localhost:5000` cho cửa hàng hoặc `http://localhost:5000/admin` cho trang quản trị. Lệnh khởi động sẽ build frontend React rồi để Express phục vụ bản build. Kiểm tra API tại `http://localhost:5000/api/health`; dừng server bằng `Ctrl+C`.
 
-Đăng nhập Admin bằng thông tin trong `.env`. Trong mục **Sản phẩm**, chọn **Thêm dữ liệu mẫu** để thêm danh mục 50 điện thoại demo thuộc Apple, Samsung, Xiaomi, OPPO, OnePlus, vivo và Google Pixel. Thao tác có thể chạy lại an toàn, không ghi đè sản phẩm hiện có. Giỏ hàng dùng `localStorage`; đặt đơn và cập nhật kho cần backend cùng MongoDB đang chạy.
+Frontend được xây dựng bằng React, Vite và React Router. Để phát triển giao diện với Vite riêng, mở thêm một cửa sổ PowerShell:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Mở địa chỉ Vite hiển thị trong terminal; Vite chuyển tiếp các yêu cầu `/api` đến backend tại `http://localhost:5000`. Backend vẫn phải chạy và kết nối được MongoDB. Khi deploy frontend độc lập lên Vercel, đặt thư mục gốc là `frontend`, lệnh build là `npm run build`, thư mục đầu ra là `dist`; có thể cấu hình `VITE_API_BASE_URL` nếu API không dùng URL Render mặc định. Với frontend khác origin trên Vercel, thêm domain frontend vào `CLIENT_ORIGINS` trong cấu hình backend để API chấp nhận CORS.
+
+Đăng nhập Admin bằng thông tin trong `.env`. Trong mục **Sản phẩm**, chọn **Thêm dữ liệu mẫu** để thêm danh mục 50 điện thoại demo thuộc Apple, Samsung, Xiaomi, OPPO, OnePlus, vivo và Google Pixel. Thao tác có thể chạy lại an toàn, không ghi đè sản phẩm hiện có. Giỏ hàng và danh sách yêu thích dùng `localStorage`; đặt đơn và cập nhật kho cần backend cùng MongoDB đang chạy.
 
 Tuỳ chọn: chạy API riêng bằng `npm run dev`, rồi mở `frontend/` bằng VS Code Live Server. Nếu Live Server dùng cổng `5500`, cho phép origin đó trong `CLIENT_ORIGINS` ở `.env`.
 

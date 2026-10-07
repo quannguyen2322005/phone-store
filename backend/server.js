@@ -37,7 +37,12 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/admin", adminRoutes);
 
 if (process.env.SERVE_FRONTEND === "true") {
-  app.use(express.static(path.join(__dirname, "../frontend"), { extensions: ["html"] }));
+  const frontendBuild = path.join(__dirname, "../frontend/dist");
+  app.use(express.static(frontendBuild));
+  app.get("*", (req, res, next) => {
+    if (req.path === "/api" || req.path.startsWith("/api/")) return next();
+    return res.sendFile(path.join(frontendBuild, "index.html"));
+  });
 }
 
 app.use((req, res) => res.status(404).json({ message: "Không tìm thấy đường dẫn API." }));
