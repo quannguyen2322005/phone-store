@@ -1,10 +1,10 @@
 # Quân Nguyễn mobile store — dự án bán và quản lý điện thoại
 
-Thư mục `frontend/` chứa website khách hàng và trang Admin; `backend/` chứa REST API Express/Mongoose. 
+Thư mục `frontend/` chứa website khách hàng và trang Admin; `backend/` chứa REST API Express/Mongoose.
 
 ## Yêu cầu
 
-- Node.js 18 trở lên
+- Node.js 24 trở lên (LTS)
 - MongoDB Community đang chạy cục bộ tại `mongodb://localhost:27017`
 
 ## Chạy toàn bộ hệ thống local
@@ -14,11 +14,10 @@ Không cần deploy hoặc đưa source code lên Internet. Website, API và Mon
 Trong PowerShell:
 
 ```powershell
-cd backend
 cd frontend
-npm install
+npm ci
 cd ..\backend
-npm install
+npm ci
 ```
 
 Nếu chưa có file `backend/.env`, tạo file từ mẫu:

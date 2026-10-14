@@ -6,6 +6,11 @@ const { requireAuth, requireAdmin } = require("../middleware/auth");
 const { asyncHandler } = require("../utils/asyncHandler");
 
 const router = express.Router();
+// Chỉ cho phép các trường này từ client; salePrice/originalPrice/stock do server tự tính.
+const EDITABLE_FIELDS = ["name", "brand", "category", "variants", "specs", "images", "description", "featured"];
+const pickEditable = (body = {}) => Object.fromEntries(
+  EDITABLE_FIELDS.filter((key) => Object.prototype.hasOwnProperty.call(body, key)).map((key) => [key, body[key]])
+);
 const legacySampleImages = [
   "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=85",
   "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=85",
@@ -84,7 +89,7 @@ router.get("/:id", asyncHandler(async (req, res) => {
 }));
 
 router.post("/", requireAuth, requireAdmin, asyncHandler(async (req, res) => {
-  const product = await Product.create(req.body);
+  const product = await Product.create(pickEditable(req.body));
   return res.status(201).json({ product });
 }));
 
@@ -92,10 +97,7 @@ router.patch("/:id", requireAuth, requireAdmin, asyncHandler(async (req, res) =>
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Mã sản phẩm không hợp lệ." });
   const product = await Product.findById(req.params.id);
   if (!product) return res.status(404).json({ message: "Không tìm thấy sản phẩm." });
-  const editable = ["name", "brand", "category", "variants", "originalPrice", "salePrice", "specs", "images", "description", "featured"];
-  for (const key of editable) {
-    if (Object.prototype.hasOwnProperty.call(req.body, key)) product[key] = req.body[key];
-  }
+  Object.assign(product, pickEditable(req.body));
   await product.save();
   return res.json({ product });
 }));
@@ -180,11 +182,16 @@ function getSampleProducts() {
       description: "Hiệu năng flagship, màn hình sắc nét và thời lượng pin bền bỉ."
     },
     ...getAdditionalSampleProducts(makeVariants)
-  ].map((product) => ({
-    ...product,
-    images: [sampleImage(product.name)],
-    stock: product.variants.reduce((total, variant) => total + variant.stock, 0)
-  }));
+  ].map((product) => {
+    const cheapest = product.variants.reduce((best, variant) => (variant.price < best.price ? variant : best));
+    return {
+      ...product,
+      images: [sampleImage(product.name)],
+      salePrice: cheapest.price,
+      originalPrice: cheapest.originalPrice,
+      stock: product.variants.reduce((total, variant) => total + variant.stock, 0)
+    };
+  });
 }
 
 function getAdditionalSampleProducts(makeVariants) {

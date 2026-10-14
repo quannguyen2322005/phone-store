@@ -18,8 +18,9 @@ const productSchema = new mongoose.Schema({
     type: [variantSchema],
     validate: [(variants) => variants.length > 0, "Sản phẩm cần có ít nhất một phiên bản."]
   },
-  originalPrice: { type: Number, min: 0, required: true },
-  salePrice: { type: Number, min: 0, required: true },
+  // Hai trường này được tự tính từ biến thể rẻ nhất (xem hook bên dưới), không nhập tay.
+  originalPrice: { type: Number, min: 0, default: 0 },
+  salePrice: { type: Number, min: 0, default: 0 },
   specs: {
     screen: { type: String, trim: true, default: "" },
     chip: { type: String, trim: true, default: "" },
@@ -33,8 +34,14 @@ const productSchema = new mongoose.Schema({
   featured: { type: Boolean, default: false }
 }, { timestamps: true });
 
-productSchema.pre("validate", function syncInventory(next) {
-  this.stock = (this.variants || []).reduce((total, variant) => total + variant.stock, 0);
+productSchema.pre("validate", function syncInventoryAndPrice(next) {
+  const variants = this.variants || [];
+  this.stock = variants.reduce((total, variant) => total + variant.stock, 0);
+  if (variants.length) {
+    const cheapest = variants.reduce((best, variant) => (variant.price < best.price ? variant : best));
+    this.salePrice = cheapest.price;
+    this.originalPrice = Math.max(cheapest.originalPrice, cheapest.price);
+  }
   next();
 });
 

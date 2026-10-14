@@ -122,7 +122,10 @@ router.patch("/:id/status", requireAuth, requireAdmin, asyncHandler(async (req, 
   if (order.status === "completed" && status !== "completed") {
     return res.status(409).json({ message: "Đơn đã hoàn thành không thể đổi trạng thái hoặc hoàn kho." });
   }
-  if (status === "cancelled" && order.status !== "cancelled") {
+  if (order.status === status) return res.json({ order });
+
+  const previousStatus = order.status;
+  if (status === "cancelled") {
     const productIds = [...new Set(order.items.map((item) => String(item.product)))];
     const products = await Product.find({ _id: { $in: productIds } }).select("_id variants._id");
     const productMap = new Map(products.map((product) => [String(product._id), product]));
@@ -132,19 +135,45 @@ router.patch("/:id/status", requireAuth, requireAdmin, asyncHandler(async (req, 
     if (missingItem) {
       return res.status(409).json({ message: `Không thể hoàn kho cho sản phẩm ${missingItem.productName}; cần kiểm tra dữ liệu kho.` });
     }
-    for (const item of order.items) {
-      const restored = await Product.updateOne(
-        { _id: item.product, "variants._id": item.variantId },
-        { $inc: { stock: item.quantity, "variants.$.stock": item.quantity } }
-      );
-      if (!restored.matchedCount) {
-        return res.status(409).json({ message: `Không thể hoàn kho cho sản phẩm ${item.productName}; cần kiểm tra dữ liệu kho.` });
+  }
+
+  // Đổi trạng thái nguyên tử: chỉ một request thắng nếu nhiều admin bấm cùng lúc,
+  // nên kho chỉ được hoàn đúng một lần.
+  const claimed = await Order.findOneAndUpdate(
+    { _id: order._id, status: previousStatus },
+    { $set: { status } },
+    { new: false }
+  );
+  if (!claimed) {
+    return res.status(409).json({ message: "Đơn hàng vừa được cập nhật bởi người khác. Vui lòng tải lại danh sách." });
+  }
+
+  if (status === "cancelled") {
+    const restoredItems = [];
+    try {
+      for (const item of claimed.items) {
+        const restored = await Product.updateOne(
+          { _id: item.product, "variants._id": item.variantId },
+          { $inc: { stock: item.quantity, "variants.$.stock": item.quantity } }
+        );
+        if (!restored.matchedCount) {
+          const error = new Error(`Không thể hoàn kho cho sản phẩm ${item.productName}; cần kiểm tra dữ liệu kho.`);
+          error.status = 409;
+          throw error;
+        }
+        restoredItems.push(item);
       }
+    } catch (error) {
+      // Hoàn tác phần kho đã cộng và trả trạng thái đơn về như cũ.
+      await Promise.all(restoredItems.map((item) => Product.updateOne(
+        { _id: item.product, "variants._id": item.variantId },
+        { $inc: { stock: -item.quantity, "variants.$.stock": -item.quantity } }
+      )));
+      await Order.updateOne({ _id: order._id }, { $set: { status: previousStatus } });
+      throw error;
     }
   }
-  order.status = status;
-  await order.save();
-  return res.json({ order });
+  return res.json({ order: await Order.findById(order._id) });
 }));
 
 module.exports = router;
