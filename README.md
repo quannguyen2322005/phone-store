@@ -1,4 +1,4 @@
-# Quân Nguyễn mobile store — dự án bán và quản lý điện thoại
+# QN-Mobiles — dự án bán và quản lý điện thoại
 
 Thư mục `frontend/` chứa website khách hàng và trang Admin; `backend/` chứa REST API Express/Mongoose.
 
@@ -49,7 +49,9 @@ Mở địa chỉ Vite hiển thị trong terminal; Vite chuyển tiếp các y�
 
 Đặt ảnh chụp sản phẩm vào `frontend/public/images/products/`. Tên file dùng tên mẫu viết thường, thay khoảng trắng bằng dấu gạch ngang và dấu `+` bằng `plus`, ví dụ `iphone-17-pro-max.webp`, `samsung-galaxy-s25-plus.jpg`, `redmi-note-14-pro-plus-5g.webp` hoặc `google-pixel-9-pro-xl.png`. Hỗ trợ `.webp`, `.jpg`, `.jpeg` và `.png`. Mỗi mẫu dùng một tên file riêng; nếu chưa có ảnh, website tạm hiển thị ảnh mẫu cũ. Sau khi thêm ảnh, đăng nhập Admin và chọn **Thêm dữ liệu mẫu** để cập nhật các sản phẩm mẫu hiện có trong MongoDB. Thao tác này chỉ thay ảnh mẫu dùng chung trước đây, không ghi đè ảnh tùy chỉnh khác.
 
-Đăng nhập Admin bằng thông tin trong `.env`. Trong mục **Sản phẩm**, chọn **Thêm dữ liệu mẫu** để thêm danh mục 50 điện thoại demo thuộc Apple, Samsung, Xiaomi, OPPO, OnePlus, vivo và Google Pixel. Thao tác có thể chạy lại an toàn, không ghi đè sản phẩm hiện có. Giỏ hàng và danh sách yêu thích dùng `localStorage`; đặt đơn và cập nhật kho cần backend cùng MongoDB đang chạy.
+Trang quản trị dùng tài khoản MongoDB. Đặt `ADMIN_EMAIL` và `ADMIN_PASSWORD` trong `backend/.env`; backend tạo hoặc nâng tài khoản đó lên Admin khi khởi động. Đăng nhập tại `/login` bằng email và mật khẩu này. Mật khẩu được lưu dạng bcrypt trong MongoDB; API xác thực bằng JWT.
+
+Sau khi đăng nhập Admin, trong mục **Sản phẩm**, chọn **Thêm dữ liệu mẫu** để thêm danh mục 50 điện thoại demo thuộc Apple, Samsung, Xiaomi, OPPO, OnePlus, vivo và Google Pixel. Thao tác có thể chạy lại an toàn, không ghi đè sản phẩm hiện có. Giỏ hàng và danh sách yêu thích dùng `localStorage`; đặt đơn và cập nhật kho cần backend cùng MongoDB đang chạy.
 
 Tuỳ chọn: chạy API riêng bằng `npm run dev`, rồi mở `frontend/` bằng VS Code Live Server. Nếu Live Server dùng cổng `5500`, cho phép origin đó trong `CLIENT_ORIGINS` ở `.env`.
 

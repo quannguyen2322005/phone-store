@@ -7,22 +7,24 @@ const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
 
 router.post("/register", asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name?.trim() || !email?.trim() || typeof password !== "string" || password.length < 8) {
-    return res.status(400).json({ message: "Cần nhập họ tên, email hợp lệ và mật khẩu ít nhất 8 ký tự." });
+  const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const { password } = req.body;
+  if (!name || name.length > 100 || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== "string" ||
+      password.length < 8 || Buffer.byteLength(password, "utf8") > 72) {
+    return res.status(400).json({ message: "Cần nhập họ tên (tối đa 100 ký tự), email hợp lệ và mật khẩu từ 8 đến 72 byte." });
   }
-  const normalizedEmail = email.trim().toLowerCase();
-  if (await User.exists({ email: normalizedEmail })) {
+  if (await User.exists({ email })) {
     return res.status(409).json({ message: "Email này đã được sử dụng." });
   }
-  const user = await User.create({ name: name.trim(), email: normalizedEmail, password });
+  const user = await User.create({ name, email, password });
   return res.status(201).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 }));
 
 router.post("/login", asyncHandler(async (req, res) => {
-  const email = req.body.email?.trim().toLowerCase();
+  const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = req.body.password;
-  if (!email || typeof password !== "string") {
+  if (!email || email.length > 254 || typeof password !== "string" || Buffer.byteLength(password, "utf8") > 72) {
     return res.status(400).json({ message: "Vui lòng nhập email và mật khẩu." });
   }
   const user = await User.findOne({ email }).select("+password");

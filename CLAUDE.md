@@ -7,7 +7,7 @@
 
 ## 1. Tổng quan
 
-Website cho cửa hàng điện thoại **[tên cửa hàng]**, gồm 2 phần:
+Website cho cửa hàng điện thoại **QN-Mobiles**, gồm 2 phần:
 
 1. **Trang khách hàng**: xem, tìm kiếm, lọc điện thoại; giỏ hàng; đặt hàng; xem lịch sử đơn.
 2. **Trang quản trị (/admin)**: chủ shop và nhân viên quản lý sản phẩm, kho, đơn hàng, khách hàng, doanh thu.
@@ -232,6 +232,8 @@ cd backend && npm ci && npm run start:local # build frontend + API, http://local
 - [ ] Báo cáo doanh thu
 - [ ] Bảo mật: helmet, rate limit, validate, rà soát lại `.env`
 - [ ] Deploy (frontend + backend + MongoDB Atlas)
+- [x] Admin đăng nhập bằng JWT MongoDB + protected routes
+- [x] Rà soát input API, giới hạn mật khẩu bcrypt, bỏ CSS admin cũ không còn dùng
 
 ---
 
@@ -245,7 +247,8 @@ Code đang chạy **khác** mục 3, 5, 6, 9 ở trên. Khi sửa code, **theo c
 
 - **Thư mục:** `backend/` (thay cho `/server`) và `frontend/` (thay cho `/client`). Backend chưa có `controllers/`, logic nằm thẳng trong `backend/src/routes/`. Trang khách gần như nằm trong một file `frontend/src/App.jsx`, CSS ở `frontend/css/styles.css`, gọi API qua `frontend/src/api.js`. Trang admin tách riêng ở `frontend/src/pages/AdminPage.jsx` (Mantine); hàm `money` dùng chung ở `frontend/src/format.js`.
 - **Lệnh chạy:** cài dependency bằng `npm ci` ở cả `frontend/` và `backend/` để dùng đúng lockfile. Chạy toàn bộ trên Windows từ `backend/`: `npm run start:local`, rồi mở `http://localhost:5000` (admin ở `/admin`). Dev giao diện riêng: `cd frontend && npm run dev` trong cửa sổ terminal khác; backend vẫn cần chạy để API hoạt động.
-- **Biến môi trường backend:** `PORT`, `MONGODB_URI`, `JWT_SECRET`, `CLIENT_ORIGINS`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (>= 12 ký tự, tạo tài khoản admin lúc khởi động). Không dùng `CLIENT_URL` và `JWT_EXPIRES_IN` (JWT cố định 12 giờ). Frontend dùng `VITE_API_BASE_URL`.
+- **Biến môi trường backend:** `PORT`, `MONGODB_URI`, `JWT_SECRET`, `CLIENT_ORIGINS`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (>= 12 ký tự, tạo/nâng tài khoản MongoDB admin lúc khởi động). Không dùng `CLIENT_URL` và `JWT_EXPIRES_IN` (JWT hết hạn sau 12 giờ). Frontend dùng `VITE_API_BASE_URL`.
+- **Xác thực admin:** đăng nhập bằng email/mật khẩu MongoDB, backend cấp JWT và kiểm tra quyền `admin` từ MongoDB; protected routes xác minh phiên qua `/api/auth/me`.
 - **Dữ liệu khác mục 5:**
   - `User.role` chỉ có `admin` và `customer` (chưa có `staff`); trường mật khẩu tên `password` (đã băm).
   - Chưa có model `Brand`; `Product.brand` là enum cố định (APPLE, SAMSUNG, XIAOMI, OPPO, ONEPLUS, VIVO, GOOGLE). Chưa có `slug`, dùng `_id`.
@@ -257,14 +260,13 @@ Code đang chạy **khác** mục 3, 5, 6, 9 ở trên. Khi sửa code, **theo c
 
 ### Việc còn tồn đọng
 
-- Bảo mật: chưa có `helmet`, `express-rate-limit` (nhất là `/auth/login`, `/auth/register`, `POST /orders`), chưa dùng `zod`. Token admin đang để trong localStorage.
+- Bảo mật: chưa có `helmet` hoặc rate limit cho `/auth/login`, `/auth/register`, `POST /orders`; chưa dùng schema validation library. JWT admin lưu trong `localStorage`.
 - Cần thêm index cho `Order` (`createdAt`, `status`, `items.product`).
 - Giỏ hàng lưu giá và tồn kho cũ trong localStorage: cần kiểm tra lại với server khi mở giỏ.
 - Chưa có: tra cứu đơn cho khách, đăng ký/đăng nhập cho khách ở frontend, upload ảnh, tìm kiếm/lọc đơn, API cập nhật `paymentStatus`, tích hợp QR thật.
-- Code: tách phần trang khách của `App.jsx` thành pages/components, thêm test cho luồng đặt hàng và hủy đơn. CSS admin cũ trong `styles.css` (`.admin-*`, `.stat-card`, `.modal*`...) không còn dùng, có thể xóa sau khi Admin chạy ổn.
+- Code: tách phần trang khách của `App.jsx` thành pages/components; thêm kiểm thử cho đặt/hủy đơn. CSS admin cũ đã được xóa sau khi xác nhận không còn caller.
 - Thư viện UI bước 2: thêm Radix UI cho giỏ hàng (Dialog) và bộ lọc, giữ CSS riêng của trang khách.
 - Nội dung cần chủ shop xác nhận có đúng chính sách thật không: "Nhận máy trong ngày", "Đổi trả 30 ngày", "Hỗ trợ trả góp linh hoạt", các banner "Trả góp 0%", "Ưu đãi đến 3 triệu", "Quà tặng đến 2 triệu"; địa chỉ cửa hàng chưa có; ảnh banner đang lấy từ Unsplash.
-- Mục 1 còn placeholder `[tên cửa hàng]` (tên hiện tại trong code: Quân Nguyễn mobile store).
 
 ### Kiểm tra CI/CD và chạy local (14/10/2026)
 
@@ -274,4 +276,15 @@ Code đang chạy **khác** mục 3, 5, 6, 9 ở trên. Khi sửa code, **theo c
 - Đã xác minh tại máy local với Node 24.21.0/npm 11.19.0: `npm ci --dry-run --offline` thành công ở cả `backend/` và `frontend/`; `npm run build` frontend thành công; kiểm tra cú pháp các file JavaScript backend thành công; `/api/health` trả `ok` và API sản phẩm trả 50 sản phẩm.
 - Giới hạn CI: chưa có lint hoặc test tự động cho luồng đặt/hủy đơn, hoàn kho và tương tác giao diện trong trình duyệt. Các kiểm tra route frontend hiện chỉ xác nhận server trả HTML chứa `#root`.
 - Chưa chạy workflow trên GitHub Actions trong lần rà soát này; các xác minh nêu trên là tại môi trường local.
-- Ảnh sản phẩm local chưa có (thư mục `frontend/public/images/products/` chỉ có `.gitkeep`); ảnh hiện dựa vào nguồn Unsplash/fallback từ xa.
+- Ảnh sản phẩm: đã thêm ảnh local cho các mẫu trong `frontend/public/images/products/`; ảnh banner vẫn dùng Unsplash.
+
+### Rà soát Ponytail (17/10/2026)
+
+- Đã chuyển trang admin về MongoDB Auth/JWT, bỏ Supabase Auth khỏi luồng frontend.
+- Đã giới hạn input xác thực/đơn hàng, xử lý query tìm kiếm sai kiểu và tránh trả lỗi nội bộ HTTP 500 cho client. `.env.local` đã được Git bỏ qua.
+- Đã xóa CSS admin cũ không còn được dùng, giảm CSS storefront build từ 42.14 KB xuống 37.62 KB (gzip 8.34 KB xuống 7.54 KB).
+- Build frontend và kiểm tra cú pháp backend thành công. Chưa chạy test end-to-end hoặc workflow GitHub Actions.
+- Việc cần xử lý trước deploy công khai: rate limit các endpoint public; xem xét giao dịch/khôi phục kho khi process dừng giữa lúc đặt hoặc hủy đơn; thêm test cho các luồng đó.
+# Instructions for Codex Agent
+
+- **Language Requirement**: Always output all thinking, reasoning processes, status updates, and action descriptions in Vietnamese.

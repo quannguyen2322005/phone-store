@@ -4,6 +4,7 @@ frontend/node_modules/
 frontend/dist/
 mongo-data/
 .env
+frontend/.env.local
 backend/.env
 *.log
 .DS_Store

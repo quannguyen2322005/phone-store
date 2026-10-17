@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "./api.js";
 import { money } from "./format.js";
+import { ProtectedRoute } from "./auth.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
 
 // Trang quản trị dùng Mantine nên tải riêng, khách mua hàng không phải tải phần này.
 const AdminPage = lazy(() => import("./pages/AdminPage.jsx"));
@@ -30,7 +32,7 @@ const BRAND_IMAGE_FALLBACKS = {
 };
 const slugify = (value) => value.toLowerCase().replace(/\+/g, " plus ").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const productImagePath = (name) => `/images/products/${slugify(name)}`;
-function productImageSource(name, brand, source) {
+function productImageSource(name, source) {
   if (source && !LEGACY_SAMPLE_IMAGES.has(source) && !source.startsWith("/images/products/")) return source;
   return `${productImagePath(name)}.webp`;
 }
@@ -68,9 +70,9 @@ function App() {
 
   useEffect(() => {
     if (location.pathname.startsWith("/product/")) return;
-    if (location.pathname.startsWith("/admin")) document.title = "Quản lý cửa hàng — Quân Nguyễn mobile store";
-    else if (location.pathname.startsWith("/about")) document.title = "Giới thiệu — Quân Nguyễn mobile store";
-    else document.title = "Quân Nguyễn mobile store — Smartphone chính hãng";
+    if (location.pathname.startsWith("/admin")) document.title = "Quản lý cửa hàng — QN-Mobiles";
+    else if (location.pathname.startsWith("/about")) document.title = "Giới thiệu — QN-Mobiles";
+    else document.title = "QN-Mobiles — Smartphone chính hãng";
   }, [location.pathname]);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ function App() {
       if (current.some((item) => item.key === key)) return current.map((item) => item.key === key ? { ...item, quantity: item.quantity + 1 } : item);
       const item = {
         key, productId: product._id, variantId: variant._id, name: product.name, brand: product.brand,
-        image: productImageSource(product.name, product.brand, variant.image || product.images?.[0]), storage: variant.storage, color: variant.color,
+        image: productImageSource(product.name, variant.image || product.images?.[0]), storage: variant.storage, color: variant.color,
         price: variant.price, stock: variant.stock, quantity: 1
       };
       return [...current, item];
@@ -130,11 +132,12 @@ function App() {
   return (
     <>
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<StorePage addProductById={addProductById} setToast={setToast} onOpenCart={() => setCartOpen(true)} />} />
         <Route path="/about" element={<AboutPage onOpenCart={() => setCartOpen(true)} />} />
         <Route path="/about.html" element={<AboutPage onOpenCart={() => setCartOpen(true)} />} />
-        <Route path="/admin" element={<Suspense fallback={<main className="container page-shell"><div className="empty-state">Đang tải trang quản trị...</div></main>}><AdminPage /></Suspense>} />
-        <Route path="/admin.html" element={<Suspense fallback={<main className="container page-shell"><div className="empty-state">Đang tải trang quản trị...</div></main>}><AdminPage /></Suspense>} />
+        <Route path="/admin" element={<ProtectedRoute admin><Suspense fallback={<main className="container page-shell"><div className="empty-state">Đang tải trang quản trị...</div></main>}><AdminPage /></Suspense></ProtectedRoute>} />
+        <Route path="/admin.html" element={<ProtectedRoute admin><Suspense fallback={<main className="container page-shell"><div className="empty-state">Đang tải trang quản trị...</div></main>}><AdminPage /></Suspense></ProtectedRoute>} />
         <Route path="/product/:id" element={<ProductPage addToCart={addToCart} onOpenCart={() => setCartOpen(true)} />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
@@ -172,7 +175,7 @@ function SiteHeader({ cartCount, onOpenCart, searchValue = "" }) {
             <button className="mobile-menu" type="button" aria-label="Mở menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
               <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
             </button>
-            <Link className="logo" to="/"><span className="logo-mark">Q</span>Quân Nguyễn mobile store</Link>
+            <Link className="logo" to="/"><span className="logo-mark">QN</span>QN-Mobiles</Link>
             <form className="searchbox" role="search" onSubmit={submitSearch}>
               <input type="search" placeholder="Bạn đang tìm điện thoại nào?" aria-label="Tìm kiếm điện thoại" value={search} onChange={(event) => setSearch(event.target.value)} />
               <button type="submit" aria-label="Tìm kiếm"><SearchIcon /></button>
@@ -201,7 +204,7 @@ function SiteHeader({ cartCount, onOpenCart, searchValue = "" }) {
 }
 
 function Footer() {
-  return <footer className="footer"><div className="container"><Link className="logo" to="/"><span className="logo-mark">Q</span>Quân Nguyễn mobile store</Link><p>Smartphone chính hãng · Hỗ trợ mỗi ngày 8:00–22:00</p><p>© 2026 Quân Nguyễn mobile store</p></div></footer>;
+  return <footer className="footer"><div className="container"><Link className="logo" to="/"><span className="logo-mark">QN</span>QN-Mobiles</Link><p>Smartphone chính hãng · Hỗ trợ mỗi ngày 8:00–22:00</p><p>© 2026 QN-Mobiles</p></div></footer>;
 }
 
 function StorePage({ addProductById, setToast, onOpenCart }) {
@@ -351,7 +354,7 @@ function FilterGroup({ title, options, selected, onChange }) {
 
 function ProductCard({ product, favorite, onFavorite, onAdd }) {
   const variant = product.variants?.find((item) => item.stock > 0) || product.variants?.[0];
-  const image = productImageSource(product.name, product.brand, variant?.image || product.images?.[0]);
+  const image = productImageSource(product.name, variant?.image || product.images?.[0]);
   const price = variant?.price ?? product.salePrice;
   const original = variant?.originalPrice ?? product.originalPrice;
   return (
@@ -392,14 +395,14 @@ function ServiceRow() {
     ["Giao hàng siêu tốc", "Nhận máy trong ngày"], ["Chính hãng 100%", "Bảo hành chính thức"],
     ["Thanh toán linh hoạt", "COD và chuyển khoản QR"], ["Đổi trả dễ dàng", "An tâm trong 30 ngày"]
   ];
-  return <section className="service-row" aria-label="Dịch vụ Quân Nguyễn mobile store">{services.map(([title, description], index) => <div className="service-item" key={title}><ServiceIcon index={index} /><div><strong>{title}</strong><small>{description}</small></div></div>)}</section>;
+  return <section className="service-row" aria-label="Dịch vụ QN-Mobiles">{services.map(([title, description], index) => <div className="service-item" key={title}><ServiceIcon index={index} /><div><strong>{title}</strong><small>{description}</small></div></div>)}</section>;
 }
 
 function AboutPage({ onOpenCart }) {
   return <div className="about-page">
     <SiteHeader cartCount={useCartCount()} onOpenCart={onOpenCart} />
     <main className="container page-shell">
-      <section className="about-hero"><div><span className="hero-label">Về cửa hàng</span><h1>Điện thoại chính hãng, tư vấn rõ ràng.</h1><p>Quân Nguyễn mobile store cung cấp điện thoại chính hãng với giá và thông tin phiên bản minh bạch. Liên hệ cửa hàng để được hỗ trợ chọn máy, đặt hàng và bảo hành.</p></div><div className="about-visual"><img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=900&q=80" alt="Điện thoại trưng bày tại cửa hàng" /></div></section>
+      <section className="about-hero"><div><span className="hero-label">Về cửa hàng</span><h1>Điện thoại chính hãng, tư vấn rõ ràng.</h1><p>QN-Mobiles cung cấp điện thoại chính hãng với giá và thông tin phiên bản minh bạch. Liên hệ cửa hàng để được hỗ trợ chọn máy, đặt hàng và bảo hành.</p></div><div className="about-visual"><img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=900&q=80" alt="Điện thoại trưng bày tại cửa hàng" /></div></section>
       <section className="story-grid"><article className="story-card"><h2>Sản phẩm</h2><p>Thông tin model, dung lượng, màu sắc và giá bán được hiển thị theo từng phiên bản.</p></article><article className="story-card"><h2>Bảo hành</h2><p>Sản phẩm chính hãng, áp dụng chính sách bảo hành của nhà sản xuất.</p></article><article className="story-card"><h2>Hỗ trợ</h2><p>Liên hệ cửa hàng để được tư vấn trước khi mua và hỗ trợ sau khi nhận máy.</p></article></section>
       <section className="contact-card" id="contact"><div><span className="hero-label">Liên hệ</span><h2>Cần tư vấn hoặc đặt hàng?</h2></div><div className="contact-info"><div><strong>Hotline/Zalo</strong><p>Quân Nguyễn: 0969733146</p></div><div><strong>Giờ làm việc</strong><p>08:00 – 22:00 hàng ngày</p></div><div><strong>Địa chỉ</strong><p>Liên hệ cửa hàng để được hướng dẫn địa điểm.</p></div></div><a className="button" href="https://zalo.me/0969733146" target="_blank" rel="noreferrer">Nhắn Zalo</a></section>
     </main><Footer />
@@ -421,7 +424,7 @@ function ProductPage({ addToCart, onOpenCart }) {
       if (!active) return;
       setProduct(result);
       setSelected(result.variants?.find((variant) => variant.stock > 0) || result.variants?.[0] || null);
-      document.title = `${result.name} — Quân Nguyễn mobile store`;
+      document.title = `${result.name} — QN-Mobiles`;
     }).catch((requestError) => { if (active) setError(requestError.message); });
     return () => { active = false; };
   }, [id]);
@@ -440,7 +443,7 @@ function ProductPage({ addToCart, onOpenCart }) {
       <div className="page-title"><Link to="/">Trang chủ</Link>　/　<a href="/#products">Điện thoại</a>　/　<span>{product?.name || "Chi tiết sản phẩm"}</span></div>
       {error ? <div className="empty-state"><strong>Không tải được sản phẩm</strong>{error}</div> : !product ? <div className="empty-state">Đang tải sản phẩm...</div> : <>
         <section className="detail-layout">
-          <div className="detail-image"><ProductImage name={product.name} brand={product.brand} source={productImageSource(product.name, product.brand, selected?.image || product.images?.[0])} alt={product.name} /></div>
+          <div className="detail-image"><ProductImage name={product.name} brand={product.brand} source={productImageSource(product.name, selected?.image || product.images?.[0])} alt={product.name} /></div>
           <div className="detail-info"><div className="product-brand">{product.brand} · {product.category}</div><h1>{product.name}</h1><div className="rating-line"><span>Hàng chính hãng · Bảo hành chính thức</span></div>
             <div className="detail-price"><span>{money(selected?.price)}</span>{selected?.originalPrice > selected?.price && <del>{money(selected.originalPrice)}</del>}</div>
             <div className="saving-label">{selected?.stock > 0 ? `Còn ${selected.stock} sản phẩm trong kho` : "Phiên bản đã hết hàng"}</div>
@@ -517,7 +520,7 @@ function NotFound() {
 }
 
 function ProductImage({ name, brand, source, alt, ...props }) {
-  const primary = productImageSource(name, brand, source);
+  const primary = productImageSource(name, source);
   const candidates = primary.startsWith("/images/products/")
     ? [".webp", ".jpg", ".jpeg", ".png"].map((extension) => `${productImagePath(name)}${extension}`)
       .concat(BRAND_IMAGE_FALLBACKS[brand] || [])

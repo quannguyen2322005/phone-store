@@ -1,6 +1,6 @@
+const { asyncHandler } = require("../utils/asyncHandler");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const { asyncHandler } = require("../utils/asyncHandler");
 
 const requireAuth = asyncHandler(async (req, res, next) => {
   const token = req.headers.authorization?.startsWith("Bearer ")
@@ -8,15 +8,15 @@ const requireAuth = asyncHandler(async (req, res, next) => {
     : "";
   if (!token) return res.status(401).json({ message: "Vui lòng đăng nhập để tiếp tục." });
 
-  let payload;
+  let claims;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET);
+    claims = jwt.verify(token, process.env.JWT_SECRET);
   } catch {
     return res.status(401).json({ message: "Phiên đăng nhập không hợp lệ hoặc đã hết hạn." });
   }
-  const user = await User.findById(payload.sub).select("name email role");
+  const user = await User.findById(claims.sub).select("name email role");
   if (!user) return res.status(401).json({ message: "Tài khoản không còn tồn tại." });
-  req.user = user;
+  req.user = { id: user.id, name: user.name, email: user.email, role: user.role };
   return next();
 });
 

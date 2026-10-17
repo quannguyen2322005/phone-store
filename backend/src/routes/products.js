@@ -42,7 +42,12 @@ router.get("/", asyncHandler(async (req, res) => {
     const storage = String(req.query.storage).split(",").map((value) => value.trim()).filter(Boolean);
     if (storage.length) filter["variants.storage"] = storage.length === 1 ? storage[0] : { $in: storage };
   }
-  if (req.query.search?.trim()) filter.$text = { $search: String(req.query.search).trim() };
+  if (req.query.search !== undefined && typeof req.query.search !== "string") {
+    return res.status(400).json({ message: "Từ khóa tìm kiếm không hợp lệ." });
+  }
+  const search = req.query.search?.trim();
+  if (search?.length > 100) return res.status(400).json({ message: "Từ khóa tìm kiếm tối đa 100 ký tự." });
+  if (search) filter.$text = { $search: search };
 
   const allowedSort = {
     price_asc: { salePrice: 1, _id: 1 },

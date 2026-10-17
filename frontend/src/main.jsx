@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
+import { AuthProvider } from "./auth.jsx";
 import "../css/styles.css";
 
 const legacyPath = window.location.pathname;
@@ -19,7 +20,7 @@ if (legacyPath.endsWith("/index.html")) {
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthProvider><App /></AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

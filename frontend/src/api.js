@@ -1,3 +1,5 @@
+import { getAuthToken } from "./authToken.js";
+
 const isLocalhost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const defaultApiUrl = isLocalhost ? "/api" : "https://phone-store-5nz3.onrender.com/api";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || window.PHONE_STORE_API_URL || defaultApiUrl).replace(/\/$/, "");
@@ -7,7 +9,7 @@ async function request(path, options = {}) {
   if (options.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
-  const token = localStorage.getItem("quannguyenmobile-admin-token");
+  const token = getAuthToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
@@ -17,7 +19,11 @@ async function request(path, options = {}) {
   } catch {
     throw new Error(`API trả về dữ liệu không hợp lệ (HTTP ${response.status}).`);
   }
-  if (!response.ok) throw new Error(result.message || `Yêu cầu thất bại (HTTP ${response.status}).`);
+  if (!response.ok) {
+    const error = new Error(result.message || `Yêu cầu thất bại (HTTP ${response.status}).`);
+    error.status = response.status;
+    throw error;
+  }
   return result;
 }
 
@@ -32,10 +38,11 @@ function queryString(params = {}) {
 
 export const api = {
   get baseUrl() { return API_BASE_URL; },
+  login(email, password) { return request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }); },
+  getMe() { return request("/auth/me"); },
   getProducts(params) { return request(`/products${queryString(params)}`); },
   getProduct(id) { return request(`/products/${encodeURIComponent(id)}`); },
   createOrder(order) { return request("/orders", { method: "POST", body: JSON.stringify(order) }); },
-  login(credentials) { return request("/auth/login", { method: "POST", body: JSON.stringify(credentials) }); },
   getOverview() { return request("/admin/overview"); },
   getOrders(params) { return request(`/orders${queryString(params)}`); },
   updateOrderStatus(id, status) {
