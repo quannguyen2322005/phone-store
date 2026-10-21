@@ -10,14 +10,23 @@ const statuses = ["pending", "shipping", "completed", "cancelled"];
 
 router.post("/", asyncHandler(async (req, res) => {
   const { customer, items, deliveryMethod, paymentMethod, note } = req.body;
-  if (typeof customer?.name !== "string" || !customer.name.trim() ||
-      typeof customer.phone !== "string" || !/^[+()\d\s.-]{8,20}$/.test(customer.phone)) {
+  const customerName = typeof customer?.name === "string" ? customer.name.trim() : "";
+  const customerPhone = typeof customer?.phone === "string" ? customer.phone.trim() : "";
+  const customerEmail = typeof customer?.email === "string" ? customer.email.trim() : "";
+  const customerAddress = typeof customer?.address === "string" ? customer.address.trim() : "";
+  const phoneDigits = customerPhone.replace(/\D/g, "").length;
+  if (!customerName || customerName.length > 100 || !/^[+()\d\s.-]{8,20}$/.test(customerPhone) ||
+      phoneDigits < 8 || phoneDigits > 15) {
     return res.status(400).json({ message: "Vui lòng nhập họ tên và số điện thoại hợp lệ." });
+  }
+  if ((customer?.email != null && typeof customer.email !== "string") || customerEmail.length > 254 ||
+      (customer?.address != null && typeof customer.address !== "string") || customerAddress.length > 300) {
+    return res.status(400).json({ message: "Email hoặc địa chỉ nhận hàng không hợp lệ." });
   }
   if (!["delivery", "pickup"].includes(deliveryMethod) || !["COD", "QR"].includes(paymentMethod)) {
     return res.status(400).json({ message: "Phương thức nhận hàng hoặc thanh toán không hợp lệ." });
   }
-  if (deliveryMethod === "delivery" && (typeof customer.address !== "string" || !customer.address.trim())) {
+  if (deliveryMethod === "delivery" && !customerAddress) {
     return res.status(400).json({ message: "Vui lòng nhập địa chỉ nhận hàng." });
   }
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
@@ -74,10 +83,10 @@ router.post("/", asyncHandler(async (req, res) => {
     const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const order = await Order.create({
       customer: {
-        name: customer.name.trim(),
-        phone: customer.phone.trim(),
-        email: typeof customer.email === "string" ? customer.email.trim() : "",
-        address: typeof customer.address === "string" ? customer.address.trim() : ""
+        name: customerName,
+        phone: customerPhone,
+        email: customerEmail,
+        address: customerAddress
       },
       items: orderItems,
       subtotal,

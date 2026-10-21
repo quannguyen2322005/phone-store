@@ -13,10 +13,10 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   customer: {
-    name: { type: String, required: true, trim: true },
-    phone: { type: String, required: true, trim: true },
-    email: { type: String, trim: true, lowercase: true, default: "" },
-    address: { type: String, trim: true, default: "" }
+    name: { type: String, required: true, trim: true, maxlength: 100 },
+    phone: { type: String, required: true, trim: true, maxlength: 20 },
+    email: { type: String, trim: true, lowercase: true, maxlength: 254, default: "" },
+    address: { type: String, trim: true, maxlength: 300, default: "" }
   },
   items: {
     type: [orderItemSchema],

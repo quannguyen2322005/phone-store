@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Alert, Badge, Box, Button, ColorInput, Container, Group, Loader, MantineProvider, Modal, NumberInput,
-  Pagination, Paper, PasswordInput, Select, SimpleGrid, Stack, Switch, Table, Tabs, Text, TextInput,
+  Pagination, Paper, Select, SimpleGrid, Stack, Switch, Table, Tabs, Text, TextInput,
   Textarea, Title, createTheme
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
@@ -12,8 +12,8 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 import { api } from "../api.js";
 import { money } from "../format.js";
+import { useAuth } from "../auth.jsx";
 
-const TOKEN_KEY = "quannguyenmobile-admin-token";
 const PAGE_SIZE = 20;
 const BRAND_OPTIONS = [
   { value: "APPLE", label: "Apple / iPhone" }, { value: "SAMSUNG", label: "Samsung" },
@@ -68,7 +68,7 @@ export default function AdminPage() {
 }
 
 function AdminApp() {
-  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY));
+  const { token, logout } = useAuth();
   const [overview, setOverview] = useState(null);
   const [tab, setTab] = useState("products");
   const [products, setProducts] = useState([]);
@@ -85,11 +85,10 @@ function AdminApp() {
   const [saving, setSaving] = useState(false);
   const [confirm, setConfirm] = useState(null); // { title, message, label, onConfirm }
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    setToken(null);
+  const handleLogout = useCallback(() => {
+    logout();
     setOverview(null);
-  }, []);
+  }, [logout]);
 
   const refreshOverview = useCallback(async () => {
     try { setOverview(await api.getOverview()); } catch (requestError) { notify(requestError.message, true); }
@@ -127,14 +126,14 @@ function AdminApp() {
     } finally { setLoading(false); }
   }, []);
 
-  // Token hết hạn hoặc không hợp lệ: tổng quan báo lỗi ngay lần tải đầu nên đăng xuất để đăng nhập lại.
+  // Chỉ đăng xuất khi backend từ chối phiên; lỗi mạng tạm thời không làm mất phiên đang dùng.
   useEffect(() => {
     if (!token) return;
     api.getOverview().then(setOverview).catch((requestError) => {
-      logout();
+      if (requestError.status === 401) handleLogout();
       notify(requestError.message, true);
     });
-  }, [token, logout]);
+  }, [token, handleLogout]);
   useEffect(() => { if (token && tab === "products") loadProducts(productPage); }, [token, tab, productPage, loadProducts]);
   useEffect(() => { if (token && tab === "orders") loadOrders(orderPage); }, [token, tab, orderPage, loadOrders]);
 
@@ -195,7 +194,7 @@ function AdminApp() {
         <Container size="xl">
           <Group justify="space-between">
             <Group gap="xs">
-              <Text fw={800} size="lg">Quân Nguyễn mobile store</Text>
+              <Text fw={800} size="lg">QN-Mobiles</Text>
               <Badge variant="light" color="blue">Quản trị</Badge>
             </Group>
             <Text component={Link} to="/" size="sm" c="gray.3">← Quay lại cửa hàng</Text>
@@ -203,14 +202,14 @@ function AdminApp() {
         </Container>
       </Box>
       <Container size="xl" py="lg">
-        {!token ? <LoginCard onLoggedIn={setToken} /> : (
+        {token && (
           <Stack gap="lg">
             <Group justify="space-between" align="flex-start">
               <div>
                 <Title order={2}>Tổng quan cửa hàng</Title>
                 <Text c="dimmed" size="sm">Quản lý tồn kho và theo dõi đơn hàng.</Text>
               </div>
-              <Button variant="default" size="xs" onClick={logout}>Đăng xuất</Button>
+              <Button variant="default" size="xs" onClick={handleLogout}>Đăng xuất</Button>
             </Group>
             <SimpleGrid cols={{ base: 1, xs: 2, md: 4 }}>
               <StatCard label="Doanh thu (đơn hoàn thành)" value={overview ? money(overview.revenue) : "—"} />
@@ -273,41 +272,6 @@ function TabState({ loading, error, children }) {
 function Pager({ page, pages, onChange }) {
   if (pages <= 1) return null;
   return <Group justify="center" mt="md"><Pagination total={pages} value={page} onChange={onChange} /></Group>;
-}
-
-function LoginCard({ onLoggedIn }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  async function submit(event) {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      const result = await api.login({ email, password });
-      if (result.user.role !== "admin") throw new Error("Tài khoản này không có quyền quản trị.");
-      localStorage.setItem(TOKEN_KEY, result.token);
-      onLoggedIn(result.token);
-      notify("Đăng nhập quản trị thành công.");
-    } catch (requestError) {
-      localStorage.removeItem(TOKEN_KEY);
-      notify(requestError.message, true);
-    } finally { setBusy(false); }
-  }
-  return (
-    <Paper withBorder p="xl" radius="md" maw={420} mx="auto" mt="xl">
-      <form onSubmit={submit}>
-        <Stack>
-          <div>
-            <Title order={3}>Đăng nhập quản trị</Title>
-            <Text c="dimmed" size="sm">Dùng tài khoản Admin đã cấu hình cho cửa hàng.</Text>
-          </div>
-          <TextInput label="Email" type="email" required autoComplete="username" value={email} onChange={(event) => setEmail(event.currentTarget.value)} />
-          <PasswordInput label="Mật khẩu" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.currentTarget.value)} />
-          <Button type="submit" loading={busy}>Đăng nhập</Button>
-        </Stack>
-      </form>
-    </Paper>
-  );
 }
 
 function ProductsTable({ products, onEdit, onDelete }) {

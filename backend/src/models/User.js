@@ -3,13 +3,14 @@ const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 100 },
-  email: { type: String, required: true, unique: true, trim: true, lowercase: true },
+  email: { type: String, required: true, unique: true, trim: true, lowercase: true, maxlength: 254, match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ },
   password: { type: String, required: true, minlength: 8, select: false },
   role: { type: String, enum: ["admin", "customer"], default: "customer" }
 }, { timestamps: true });
 
 userSchema.pre("save", async function hashPassword() {
   if (!this.isModified("password")) return;
+  if (bcrypt.truncates(this.password)) throw new Error("Mật khẩu không được dài quá 72 byte.");
   this.password = await bcrypt.hash(this.password, 12);
 });
 
