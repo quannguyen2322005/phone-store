@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Hình điện thoại">
+  <rect width="240" height="240" rx="24" fill="#eef1f4"/>
+  <rect x="77" y="30" width="86" height="180" rx="15" fill="#fff" stroke="#8a96a5" stroke-width="6"/>
+  <rect x="85" y="43" width="70" height="145" rx="5" fill="#e1e7ed"/>
+  <circle cx="120" cy="199" r="4" fill="#8a96a5"/>
+  <path d="M110 54h20" stroke="#aab3be" stroke-width="4" stroke-linecap="round"/>
+</svg>

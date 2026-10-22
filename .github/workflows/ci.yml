@@ -53,13 +53,18 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
+      - name: Run backend lint and tests
+        run: |
+          npm run lint
+          npm test
+          npm run build
+
       - name: Install and build React frontend
         run: |
           npm ci --prefix ../frontend
+          npm run lint --prefix ../frontend
+          npm test --prefix ../frontend
           npm run build --prefix ../frontend
-
-      - name: Validate backend syntax
-        run: node --check server.js
 
       - name: Start backend server
         run: |

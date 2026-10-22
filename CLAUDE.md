@@ -245,7 +245,7 @@ cd backend && npm ci && npm run start:local # build frontend + API, http://local
 
 Code đang chạy **khác** mục 3, 5, 6, 9 ở trên. Khi sửa code, **theo code thực tế**, không tự đổi cấu trúc cho giống tài liệu (xem mục 12). Muốn chuyển sang cấu trúc ở mục 3 thì phải hỏi tôi trước.
 
-- **Thư mục:** `backend/` (thay cho `/server`) và `frontend/` (thay cho `/client`). Backend chưa có `controllers/`, logic nằm thẳng trong `backend/src/routes/`. Trang khách gần như nằm trong một file `frontend/src/App.jsx`, CSS ở `frontend/css/styles.css`, gọi API qua `frontend/src/api.js`. Trang admin tách riêng ở `frontend/src/pages/AdminPage.jsx` (Mantine); hàm `money` dùng chung ở `frontend/src/format.js`.
+- **Thư mục:** `backend/` (thay cho `/server`) và `frontend/` (thay cho `/client`). Backend chưa có `controllers/`, logic nằm thẳng trong `backend/src/routes/`; API test ở `backend/test/`. `frontend/src/App.jsx` giữ routes, layout và trạng thái chung; storefront được tách vào `frontend/src/components/`, `frontend/src/pages/`, `frontend/src/hooks/` và `frontend/src/lib/`. CSS ở `frontend/css/styles.css`, gọi API qua `frontend/src/api.js`. Trang admin tách riêng ở `frontend/src/pages/AdminPage.jsx` (Mantine); hàm `money` dùng chung ở `frontend/src/format.js`.
 - **Lệnh chạy:** cài dependency bằng `npm ci` ở cả `frontend/` và `backend/` để dùng đúng lockfile. Chạy toàn bộ trên Windows từ `backend/`: `npm run start:local`, rồi mở `http://localhost:5000` (admin ở `/admin`). Dev giao diện riêng: `cd frontend && npm run dev` trong cửa sổ terminal khác; backend vẫn cần chạy để API hoạt động.
 - **Biến môi trường backend:** `PORT`, `MONGODB_URI`, `JWT_SECRET`, `CLIENT_ORIGINS`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (>= 12 ký tự, tạo/nâng tài khoản MongoDB admin lúc khởi động). Không dùng `CLIENT_URL` và `JWT_EXPIRES_IN` (JWT hết hạn sau 12 giờ). Frontend dùng `VITE_API_BASE_URL`.
 - **Xác thực admin:** đăng nhập bằng email/mật khẩu MongoDB, backend cấp JWT và kiểm tra quyền `admin` từ MongoDB; protected routes xác minh phiên qua `/api/auth/me`.
@@ -260,21 +260,21 @@ Code đang chạy **khác** mục 3, 5, 6, 9 ở trên. Khi sửa code, **theo c
 
 ### Việc còn tồn đọng
 
-- Bảo mật: chưa có `helmet` hoặc rate limit cho `/auth/login`, `/auth/register`, `POST /orders`; chưa dùng schema validation library. JWT admin lưu trong `localStorage`.
+- Bảo mật: helmet và rate limit đã bật cho API, login, register, đặt hàng và tra cứu đơn. JWT admin vẫn lưu trong `localStorage`; chưa dùng schema validation library.
 - Cần thêm index cho `Order` (`createdAt`, `status`, `items.product`).
-- Giỏ hàng lưu giá và tồn kho cũ trong localStorage: cần kiểm tra lại với server khi mở giỏ.
-- Chưa có: tra cứu đơn cho khách, đăng ký/đăng nhập cho khách ở frontend, upload ảnh, tìm kiếm/lọc đơn, API cập nhật `paymentStatus`, tích hợp QR thật.
-- Code: tách phần trang khách của `App.jsx` thành pages/components; thêm kiểm thử cho đặt/hủy đơn. CSS admin cũ đã được xóa sau khi xác nhận không còn caller.
+- Giỏ hàng kiểm tra lại giá và tồn kho với server khi tải app/mở giỏ; khách có thể tra cứu đơn bằng mã và số điện thoại.
+- Chưa có: upload ảnh, tích hợp tạo QR/ngân hàng thật, cổng thanh toán.
+- Code: storefront đã được tách thành pages/components/hooks/lib; có test API cho xác thực, đặt/hủy đơn và hoàn kho, test frontend cho helper và CartDrawer. CSS admin cũ đã được xóa sau khi xác nhận không còn caller.
 - Thư viện UI bước 2: thêm Radix UI cho giỏ hàng (Dialog) và bộ lọc, giữ CSS riêng của trang khách.
 - Nội dung cần chủ shop xác nhận có đúng chính sách thật không: "Nhận máy trong ngày", "Đổi trả 30 ngày", "Hỗ trợ trả góp linh hoạt", các banner "Trả góp 0%", "Ưu đãi đến 3 triệu", "Quà tặng đến 2 triệu"; địa chỉ cửa hàng chưa có; ảnh banner đang lấy từ Unsplash.
 
 ### Kiểm tra CI/CD và chạy local (14/10/2026)
 
-- Workflow duy nhất là `.github/workflows/ci.yml`. Workflow chạy khi push hoặc mở pull request vào `main`/`master`; cài backend/frontend, build frontend, khởi động MongoDB và API, rồi chạy smoke test đăng nhập admin, thêm dữ liệu mẫu, đọc sản phẩm/tổng quan admin và xác nhận các route trả HTML.
+- Workflow duy nhất là `.github/workflows/ci.yml`. Workflow chạy khi push hoặc mở pull request vào `main`/`master`; cài backend/frontend, chạy lint và test, build frontend, khởi động MongoDB và API, rồi chạy smoke test đăng nhập admin, thêm dữ liệu mẫu, đọc sản phẩm/tổng quan admin và xác nhận các route trả HTML.
 - Đã đồng bộ runtime về Node 24: `engines` của cả hai package là `>=24`; CI dùng Node 24 và cache dựa trên cả hai lockfile; README hướng dẫn cài dependencies đúng thứ tự.
 - **Chưa có CD:** workflow không deploy lên hosting. README cũng ghi rõ deploy hiện làm riêng.
 - Đã xác minh tại máy local với Node 24.21.0/npm 11.19.0: `npm ci --dry-run --offline` thành công ở cả `backend/` và `frontend/`; `npm run build` frontend thành công; kiểm tra cú pháp các file JavaScript backend thành công; `/api/health` trả `ok` và API sản phẩm trả 50 sản phẩm.
-- Giới hạn CI: chưa có lint hoặc test tự động cho luồng đặt/hủy đơn, hoàn kho và tương tác giao diện trong trình duyệt. Các kiểm tra route frontend hiện chỉ xác nhận server trả HTML chứa `#root`.
+- CI kiểm tra luồng đặt/hủy đơn, hoàn kho và component CartDrawer bằng test tự động. Smoke test route frontend vẫn chỉ xác nhận server trả HTML chứa `#root`.
 - Chưa chạy workflow trên GitHub Actions trong lần rà soát này; các xác minh nêu trên là tại môi trường local.
 - Ảnh sản phẩm: đã thêm ảnh local cho các mẫu trong `frontend/public/images/products/`; ảnh banner vẫn dùng Unsplash.
 
@@ -284,7 +284,13 @@ Code đang chạy **khác** mục 3, 5, 6, 9 ở trên. Khi sửa code, **theo c
 - Đã giới hạn input xác thực/đơn hàng, xử lý query tìm kiếm sai kiểu và tránh trả lỗi nội bộ HTTP 500 cho client. `.env.local` đã được Git bỏ qua.
 - Đã xóa CSS admin cũ không còn được dùng, giảm CSS storefront build từ 42.14 KB xuống 37.62 KB (gzip 8.34 KB xuống 7.54 KB).
 - Build frontend và kiểm tra cú pháp backend thành công. Chưa chạy test end-to-end hoặc workflow GitHub Actions.
-- Việc cần xử lý trước deploy công khai: rate limit các endpoint public; xem xét giao dịch/khôi phục kho khi process dừng giữa lúc đặt hoặc hủy đơn; thêm test cho các luồng đó.
+- Việc cần xem xét trước deploy công khai: giao dịch/khôi phục kho khi process dừng giữa lúc đặt hoặc hủy đơn; mở rộng test cho cạnh tranh cập nhật kho.
+
+### Công cụ chất lượng và lệnh kiểm tra (22/10/2026)
+
+- Cả hai package có `npm run lint` và `npm run format`; frontend có `npm test` bằng Vitest/Testing Library, backend có `npm test` bằng `node:test`.
+- Backend test chỉ dùng MongoDB loopback và database riêng `qn_mobiles_node_test`, sau đó xóa database test. Không dùng URI production để chạy test.
+- Chạy frontend: `cd frontend; npm run lint; npm test; npm run build`. Chạy backend: `cd backend; npm run build; npm run lint; npm test` (build kiểm tra cú pháp entrypoint, test cần MongoDB cục bộ).
 # Instructions for Codex Agent
 
 - **Language Requirement**: Always output all thinking, reasoning processes, status updates, and action descriptions in Vietnamese.

@@ -1,12 +1,22 @@
 const express = require("express");
+const { rateLimit } = require("express-rate-limit");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
+const REGISTER_RATE_LIMIT = { windowMs: 60 * 60 * 1000, limit: 5 };
+const LOGIN_RATE_LIMIT = { windowMs: 15 * 60 * 1000, limit: 10 };
+const rateLimitOptions = {
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Bạn gửi yêu cầu quá nhanh. Vui lòng thử lại sau." }
+};
+const registerRateLimit = rateLimit({ ...REGISTER_RATE_LIMIT, ...rateLimitOptions });
+const loginRateLimit = rateLimit({ ...LOGIN_RATE_LIMIT, ...rateLimitOptions });
 
-router.post("/register", asyncHandler(async (req, res) => {
+router.post("/register", registerRateLimit, asyncHandler(async (req, res) => {
   const name = typeof req.body.name === "string" ? req.body.name.trim() : "";
   const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const { password } = req.body;
@@ -21,7 +31,7 @@ router.post("/register", asyncHandler(async (req, res) => {
   return res.status(201).json({ user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 }));
 
-router.post("/login", asyncHandler(async (req, res) => {
+router.post("/login", loginRateLimit, asyncHandler(async (req, res) => {
   const email = typeof req.body.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = req.body.password;
   if (!email || email.length > 254 || typeof password !== "string" || Buffer.byteLength(password, "utf8") > 72) {

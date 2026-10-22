@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre("save", async function hashPassword() {
   if (!this.isModified("password")) return;
-  if (bcrypt.truncates(this.password)) throw new Error("Mật khẩu không được dài quá 72 byte.");
+  if (Buffer.byteLength(this.password, "utf8") > 72) throw new Error("Mật khẩu không được dài quá 72 byte.");
   this.password = await bcrypt.hash(this.password, 12);
 });
 

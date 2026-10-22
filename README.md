@@ -55,7 +55,33 @@ Sau khi đăng nhập Admin, trong mục **Sản phẩm**, chọn **Thêm dữ l
 
 Tuỳ chọn: chạy API riêng bằng `npm run dev`, rồi mở `frontend/` bằng VS Code Live Server. Nếu Live Server dùng cổng `5500`, cho phép origin đó trong `CLIENT_ORIGINS` ở `.env`.
 
-Workflow GitHub Actions chỉ chạy kiểm thử CI, không tự deploy ứng dụng lên cloud. Chạy local không yêu cầu push code hoặc tài khoản hosting.
+## Cấu trúc mã nguồn và kiểm tra chất lượng
+
+- `frontend/src/App.jsx`: route, layout chung và trạng thái cart/toast.
+- `frontend/src/components/`: header, footer, giỏ hàng, hero, thẻ và ảnh sản phẩm, icon.
+- `frontend/src/pages/`: trang danh sách, chi tiết, giới thiệu, đăng nhập/đăng ký, tra cứu đơn và Admin.
+- `frontend/src/hooks/`: hook giỏ hàng và số lượng trên header; `frontend/src/lib/`: đọc localStorage, đường dẫn ảnh và dữ liệu dùng chung.
+- `backend/src/routes/`: các API Express; `backend/test/api.test.js`: kiểm thử API và kho hàng.
+
+Chạy công cụ chất lượng từ từng package:
+
+```powershell
+cd backend
+npm run build
+npm run lint
+npm test
+npm run format
+
+cd ..\frontend
+npm run lint
+npm test
+npm run build
+npm run format
+```
+
+Backend chạy CommonJS trực tiếp nên `npm run build` kiểm tra cú pháp entrypoint bằng Node. Backend test cần MongoDB cục bộ. Test chỉ kết nối `localhost`/`127.0.0.1`, dùng database riêng `qn_mobiles_node_test` và xóa database này khi chạy; không cấu hình test với MongoDB production. `npm run format` dùng Prettier ghi định dạng lại các file JavaScript/JSX trong package.
+
+Workflow GitHub Actions chạy lint, test backend/frontend, build frontend, sau đó giữ nguyên smoke test đăng nhập Admin, dữ liệu mẫu, API và các route HTML. Workflow chỉ kiểm thử CI, không tự deploy ứng dụng lên cloud. Chạy local không yêu cầu push code hoặc tài khoản hosting.
 
 ## API chính
 

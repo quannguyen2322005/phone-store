@@ -10,13 +10,13 @@ export default function LoginPage() {
   const { user, login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const destination = location.state?.from?.pathname || "/";
+  const destination = location.state?.from || (user?.role === "admin" ? "/admin" : "/");
   if (user) return <Navigate to={destination} replace />;
   async function submit(event) {
     event.preventDefault(); setError(""); setBusy(true);
     try {
-      await login(email.trim(), password);
-      navigate(destination, { replace: true });
+      const authenticatedUser = await login(email.trim(), password);
+      navigate(location.state?.from || (authenticatedUser.role === "admin" ? "/admin" : "/"), { replace: true });
     } catch (loginError) {
       setError(loginError.message || "Không thể đăng nhập. Vui lòng thử lại.");
     } finally {

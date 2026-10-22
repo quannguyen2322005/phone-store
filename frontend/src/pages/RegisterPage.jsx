@@ -13,7 +13,7 @@ export default function RegisterPage() {
   const { user, login } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const destination = location.state?.from?.pathname || "/";
+  const destination = location.state?.from || (user?.role === "admin" ? "/admin" : "/");
   if (user) return <Navigate to={destination} replace />;
 
   async function submit(event) {
@@ -26,8 +26,8 @@ export default function RegisterPage() {
     setBusy(true);
     try {
       await api.register(name.trim(), email.trim(), password);
-      await login(email.trim(), password);
-      navigate(destination, { replace: true });
+      const authenticatedUser = await login(email.trim(), password);
+      navigate(location.state?.from || (authenticatedUser.role === "admin" ? "/admin" : "/"), { replace: true });
     } catch (registerError) {
       setError(registerError.message || "Không thể tạo tài khoản. Vui lòng thử lại.");
     } finally {

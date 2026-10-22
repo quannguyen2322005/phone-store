@@ -43,13 +43,21 @@ export const api = {
   getMe() { return request("/auth/me"); },
   getProducts(params) { return request(`/products${queryString(params)}`); },
   getProduct(id) { return request(`/products/${encodeURIComponent(id)}`); },
+  checkCart(items) { return request("/products/cart-check", { method: "POST", body: JSON.stringify({ items }) }); },
   createOrder(order) { return request("/orders", { method: "POST", body: JSON.stringify(order) }); },
+  lookupOrder(params) { return request(`/orders/lookup${queryString(params)}`); },
   getOverview() { return request("/admin/overview"); },
   getOrders(params) { return request(`/orders${queryString(params)}`); },
   updateOrderStatus(id, status) {
     return request(`/orders/${encodeURIComponent(id)}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status })
+    });
+  },
+  updateOrderPaymentStatus(id, paymentStatus) {
+    return request(`/orders/${encodeURIComponent(id)}/payment-status`, {
+      method: "PATCH",
+      body: JSON.stringify({ paymentStatus })
     });
   },
   createProduct(product) { return request("/products", { method: "POST", body: JSON.stringify(product) }); },

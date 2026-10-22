@@ -1,4 +1,6 @@
 const express = require("express");
+const crypto = require("crypto");
+const { rateLimit } = require("express-rate-limit");
 const mongoose = require("mongoose");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
@@ -7,8 +9,43 @@ const { asyncHandler } = require("../utils/asyncHandler");
 
 const router = express.Router();
 const statuses = ["pending", "shipping", "completed", "cancelled"];
+const ORDER_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const ORDER_CODE_LENGTH = 8;
+const ORDER_CODE_ATTEMPTS = 5;
+const ORDER_RATE_LIMIT = { windowMs: 60 * 60 * 1000, limit: 10 };
+const ORDER_LOOKUP_RATE_LIMIT = { windowMs: 15 * 60 * 1000, limit: 20 };
+const orderRateLimit = rateLimit({
+  ...ORDER_RATE_LIMIT,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Bạn gửi yêu cầu quá nhanh. Vui lòng thử lại sau." }
+});
+const orderLookupRateLimit = rateLimit({
+  ...ORDER_LOOKUP_RATE_LIMIT,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Bạn đã tra cứu quá nhiều lần. Vui lòng thử lại sau." }
+});
 
-router.post("/", asyncHandler(async (req, res) => {
+function generateOrderCode() {
+  return Array.from({ length: ORDER_CODE_LENGTH }, () =>
+    ORDER_CODE_ALPHABET[crypto.randomInt(ORDER_CODE_ALPHABET.length)]
+  ).join("");
+}
+
+async function createOrderWithCode(orderData) {
+  for (let attempt = 0; attempt < ORDER_CODE_ATTEMPTS; attempt += 1) {
+    try {
+      return await Order.create({ ...orderData, code: generateOrderCode() });
+    } catch (error) {
+      const codeCollision = error.code === 11000 && (error.keyPattern?.code || error.keyValue?.code);
+      if (!codeCollision || attempt === ORDER_CODE_ATTEMPTS - 1) throw error;
+    }
+  }
+  throw new Error("Không thể tạo mã đơn hàng.");
+}
+
+router.post("/", orderRateLimit, asyncHandler(async (req, res) => {
   const { customer, items, deliveryMethod, paymentMethod, note } = req.body;
   const customerName = typeof customer?.name === "string" ? customer.name.trim() : "";
   const customerPhone = typeof customer?.phone === "string" ? customer.phone.trim() : "";
@@ -48,7 +85,7 @@ router.post("/", asyncHandler(async (req, res) => {
     const key = `${item.productId}:${item.variantId}`;
     requested.set(key, (requested.get(key) || 0) + quantity);
   }
-  for (const [key, quantity] of requested) {
+  for (const quantity of requested.values()) {
     if (quantity > 10) return res.status(400).json({ message: "Tổng số lượng mỗi phiên bản không được vượt quá 10." });
   }
 
@@ -81,7 +118,7 @@ router.post("/", asyncHandler(async (req, res) => {
       });
     }
     const subtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const order = await Order.create({
+    const order = await createOrderWithCode({
       customer: {
         name: customerName,
         phone: customerPhone,
@@ -93,7 +130,7 @@ router.post("/", asyncHandler(async (req, res) => {
       total: subtotal,
       deliveryMethod,
       paymentMethod,
-      note: note || ""
+      note: typeof note === "string" ? note.trim().slice(0, 500) : ""
     });
     return res.status(201).json({ message: "Đặt hàng thành công.", order });
   } catch (error) {
@@ -107,16 +144,99 @@ router.post("/", asyncHandler(async (req, res) => {
   }
 }));
 
+router.get("/lookup", orderLookupRateLimit, asyncHandler(async (req, res) => {
+  const { code, phone } = req.query;
+  if (typeof code !== "string" || typeof phone !== "string") {
+    return res.status(400).json({ message: "Vui lòng nhập mã đơn và số điện thoại." });
+  }
+
+  const normalizedCode = code.trim().toUpperCase();
+  const phoneDigits = phone.replace(/\D/g, "");
+  if (!/^[A-Z0-9]{8}$/.test(normalizedCode) || phone.trim().length < 8 || phone.trim().length > 20 ||
+      phoneDigits.length < 8 || phoneDigits.length > 15) {
+    return res.status(400).json({ message: "Mã đơn hoặc số điện thoại không hợp lệ." });
+  }
+
+  const phonePattern = new RegExp(`^${phoneDigits.split("").join("\\D*")}$`);
+  const order = await Order.findOne({
+    $and: [
+      { "customer.phone": phonePattern },
+      { $or: [
+        { code: normalizedCode },
+        { $expr: { $eq: [
+          { $toUpper: { $substrCP: [{ $toString: "$_id" }, 16, 8] } },
+          normalizedCode
+        ] } }
+      ] }
+    ]
+  }).select("code createdAt status paymentStatus paymentMethod deliveryMethod items.productName items.storage items.color items.quantity items.price total customer.name customer.phone customer.address").lean();
+
+  if (!order) return res.status(404).json({ message: "Không tìm thấy đơn hàng với thông tin này." });
+
+  const maskText = (value) => value ? `${Array.from(value.trim())[0]}•••` : "";
+  return res.json({ order: {
+    code: order.code || String(order._id).slice(-8).toUpperCase(),
+    createdAt: order.createdAt,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    paymentMethod: order.paymentMethod,
+    deliveryMethod: order.deliveryMethod,
+    items: order.items.map((item) => ({
+      name: item.productName,
+      storage: item.storage,
+      color: item.color,
+      quantity: item.quantity,
+      price: item.price
+    })),
+    total: order.total,
+    customer: {
+      name: maskText(order.customer.name),
+      phone: `••••••${order.customer.phone.replace(/\D/g, "").slice(-3)}`,
+      address: maskText(order.customer.address)
+    }
+  } });
+}));
+
 router.get("/", requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 20));
   const filter = {};
   if (statuses.includes(req.query.status)) filter.status = req.query.status;
+  if (req.query.q !== undefined && typeof req.query.q !== "string") {
+    return res.status(400).json({ message: "Từ khóa tìm kiếm đơn hàng không hợp lệ." });
+  }
+  if (req.query.q?.length > 100) return res.status(400).json({ message: "Từ khóa tìm kiếm tối đa 100 ký tự." });
+  const search = req.query.q?.trim();
+  if (search) {
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    filter.$or = [
+      { "customer.name": new RegExp(escapedSearch, "i") },
+      { "customer.phone": new RegExp(escapedSearch, "i") }
+    ];
+  }
   const [orders, total] = await Promise.all([
     Order.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
     Order.countDocuments(filter)
   ]);
   return res.json({ orders, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
+}));
+
+router.patch("/:id/payment-status", requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ message: "Mã đơn hàng không hợp lệ." });
+  const paymentStatus = req.body?.paymentStatus;
+  if (!["unpaid", "paid"].includes(paymentStatus)) {
+    return res.status(400).json({ message: "Trạng thái thanh toán không hợp lệ." });
+  }
+  const order = await Order.findOneAndUpdate(
+    { _id: req.params.id, status: { $ne: "cancelled" } },
+    { $set: { paymentStatus } },
+    { new: true, runValidators: true }
+  );
+  if (order) return res.json({ order });
+  if (await Order.exists({ _id: req.params.id })) {
+    return res.status(409).json({ message: "Không thể đổi thanh toán cho đơn đã hủy." });
+  }
+  return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
 }));
 
 router.patch("/:id/status", requireAuth, requireAdmin, asyncHandler(async (req, res) => {

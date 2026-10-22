@@ -62,6 +62,35 @@ router.get("/", asyncHandler(async (req, res) => {
   return res.json({ products, pagination: { page, limit, total, pages: Math.ceil(total / limit) } });
 }));
 
+router.post("/cart-check", asyncHandler(async (req, res) => {
+  const { items } = req.body;
+  if (!Array.isArray(items) || items.length > 30) {
+    return res.status(400).json({ message: "Danh sách sản phẩm trong giỏ không hợp lệ (tối đa 30 sản phẩm)." });
+  }
+  const hasInvalidItem = items.some((item) => !item || typeof item !== "object"
+    || typeof item.productId !== "string" || !mongoose.isObjectIdOrHexString(item.productId)
+    || typeof item.variantId !== "string" || !mongoose.isObjectIdOrHexString(item.variantId));
+  if (hasInvalidItem) return res.status(400).json({ message: "Mã sản phẩm hoặc phiên bản không hợp lệ." });
+
+  const products = await Product.find({ _id: { $in: items.map((item) => item.productId) } })
+    .select("_id name images variants._id variants.price variants.stock variants.image");
+  const productsById = new Map(products.map((product) => [product._id.toString().toLowerCase(), product]));
+  return res.json({ items: items.map(({ productId, variantId }) => {
+    const product = productsById.get(productId.toLowerCase());
+    const variant = product?.variants.find((item) => item._id.toString().toLowerCase() === variantId.toLowerCase());
+    if (!variant) return { productId, variantId, exists: false };
+    return {
+      productId,
+      variantId,
+      exists: true,
+      price: variant.price,
+      stock: variant.stock,
+      name: product.name,
+      image: variant.image || product.images?.[0] || ""
+    };
+  }) });
+}));
+
 router.post("/seed", requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const samples = getSampleProducts();
   const operations = samples.map((sample) => ({

@@ -2,6 +2,8 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const { rateLimit } = require("express-rate-limit");
 const path = require("path");
 const connectDatabase = require("./src/config/db");
 const authRoutes = require("./src/routes/auth");
@@ -10,8 +12,23 @@ const orderRoutes = require("./src/routes/orders");
 const adminRoutes = require("./src/routes/admin");
 const User = require("./src/models/User");
 
+const API_RATE_LIMIT = { windowMs: 15 * 60 * 1000, limit: 300 };
 const app = express();
 const isProduction = process.env.NODE_ENV === "production" || process.env.RENDER === "true";
+if (isProduction) {
+  // Render đứng sau một proxy; tin đúng một proxy để lấy IP gốc cho rate limit.
+  app.set("trust proxy", 1);
+}
+app.use(helmet({
+  // API origin được cấu hình lúc build frontend nên CSP tĩnh có thể chặn kết nối hợp lệ.
+  contentSecurityPolicy: false
+}));
+const apiRateLimit = rateLimit({
+  ...API_RATE_LIMIT,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Bạn gửi yêu cầu quá nhanh. Vui lòng thử lại sau." }
+});
 const configuredOrigins = process.env.CLIENT_ORIGINS || "http://localhost:5500,http://127.0.0.1:5500";
 const localOrigins = isProduction
   ? []
@@ -28,6 +45,7 @@ app.use(cors({
     return callback(error);
   }
 }));
+app.use("/api", apiRateLimit);
 app.use(express.json({ limit: "1mb" }));
 app.use((req, res, next) => {
   if (req.body !== undefined && (!req.body || typeof req.body !== "object" || Array.isArray(req.body))) {

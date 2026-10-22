@@ -8,20 +8,23 @@ const router = express.Router();
 router.use(requireAuth, requireAdmin);
 
 router.get("/overview", asyncHandler(async (req, res) => {
-  const [revenue, newOrders, lowStock, productCount] = await Promise.all([
+  const [revenue, newOrders, lowStock, productCount, lowStockProducts] = await Promise.all([
     Order.aggregate([
       { $match: { status: "completed" } },
       { $group: { _id: null, total: { $sum: "$total" } } }
     ]),
     Order.countDocuments({ status: "pending" }),
     Product.countDocuments({ stock: { $lte: 5 } }),
-    Product.countDocuments()
+    Product.countDocuments(),
+    Product.find({ stock: { $lte: 5 } }).sort({ stock: 1, _id: 1 }).limit(5).select("_id name stock")
   ]);
+  const lowStockProductList = lowStockProducts.map(({ _id, name, stock }) => ({ id: String(_id), name, stock }));
   return res.json({
     revenue: revenue[0]?.total || 0,
     newOrders,
     lowStock,
-    productCount
+    productCount,
+    lowStockProducts: lowStockProductList
   });
 }));
 

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const ORDER_CODE_PATTERN = /^[A-HJ-NP-Z2-9]{8}$/;
 
 const orderItemSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
@@ -12,6 +13,7 @@ const orderItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
+  code: { type: String, unique: true, sparse: true, match: ORDER_CODE_PATTERN },
   customer: {
     name: { type: String, required: true, trim: true, maxlength: 100 },
     phone: { type: String, required: true, trim: true, maxlength: 20 },
